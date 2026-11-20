@@ -1,0 +1,12 @@
+[package]
+name = "cafofo-game-detector"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+sysinfo = "0.33"
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
