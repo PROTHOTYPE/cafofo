@@ -621,9 +621,11 @@ export function App() {
       <div className="h-[100dvh] w-full overflow-x-hidden flex flex-col bg-[#09090B] text-[#FAFAFA] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] select-none animate-cafofo-boot">
         <WindowTitlebar />
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-[#B91C1C] flex items-center justify-center shadow-crimson-glow animate-radar-pulse-crimson">
-            <AudioWaveform className="w-5 h-5 text-white" strokeWidth={1.75} />
-          </div>
+          <img
+            src="/logo-full.png"
+            alt="Cafofo"
+            className="w-28 h-28 rounded-3xl object-cover shadow-crimson-glow border border-[#EF4444]/35 animate-radar-pulse-crimson"
+          />
           <span className="text-xs font-mono tracking-wider text-[#A1A1AA]">
             INICIALIZANDO CAFOFO...
           </span>
@@ -1037,13 +1039,17 @@ export function App() {
                         }`}
                       />
                       <div
-                        className={`relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${
+                        className={`relative w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden transition-all ${
                           viewMode === "home"
-                            ? "bg-[#B91C1C] text-[#FAFAFA] shadow-crimson-glow"
-                            : "bg-[#16161C] hover:bg-[#1E1E26] text-[#EF4444] hairline-box"
+                            ? "ring-2 ring-[#EF4444] shadow-crimson-glow"
+                            : "hairline-box opacity-90 hover:opacity-100"
                         }`}
                       >
-                        <AudioWaveform className="w-5 h-5" strokeWidth={1.75} />
+                        <img
+                          src="/logo-icon.png"
+                          alt="Cafofo"
+                          className="w-full h-full object-cover"
+                        />
                         {totalHomeBadgeCount > 0 && (
                           <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#EF4444] border-2 border-[#09090B] font-mono text-[9px] font-bold text-white flex items-center justify-center leading-none">
                             {totalHomeBadgeCount > 99 ? "99+" : totalHomeBadgeCount}

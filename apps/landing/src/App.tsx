@@ -43,7 +43,7 @@ interface LatestReleaseManifest {
 const FALLBACK_RELEASE: LatestReleaseManifest = {
   version: "0.1.0",
   notes:
-    "Primeira versão oficial do Cafofo Desktop para Windows com voz RNNoise, palco de transmissões 16:9, bot de música sincronizado e auto-update via Cloudflare R2.",
+    "Primeira versão oficial do Cafofo Desktop para Windows com voz RNNoise, transmissão de tela em até 1440p 60fps, bot de música sincronizado e auto-update via Cloudflare R2.",
   size: 12_373_196,
   platforms: {
     "windows-x86_64": {
@@ -77,9 +77,9 @@ const FEATURES = [
   },
   {
     icon: MonitorUp,
-    title: "Palco de transmissões 16:9",
+    title: "Transmissão em até 1440p 60fps",
     description:
-      "Compartilhe a janela do jogo ou a tela inteira em alta definição, com foco fixado no palco sem sobrepor os cartões da galera.",
+      "Compartilhe a janela do jogo ou a tela inteira em até 1440p a 60fps, com foco fixado no palco sem sobrepor os cartões da galera.",
   },
   {
     icon: Disc3,
@@ -300,8 +300,8 @@ export function App() {
               className="text-base sm:text-lg text-[#A1A1AA] max-w-2xl mx-auto leading-relaxed"
             >
               O Cafofo roda nativo em Rust + Tauri para não comer seu FPS nem sua
-              RAM enquanto você joga. Entre na call, compartilhe a tela em 16:9 e
-              solte uma música sincronizada com a sala.
+              RAM enquanto você joga. Entre na call, compartilhe sua tela em até
+              1440p 60fps e solte uma música sincronizada com a sala.
             </motion.p>
 
             <motion.div

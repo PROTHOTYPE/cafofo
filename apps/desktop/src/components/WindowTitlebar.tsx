@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { AudioWaveform, Copy, Minus, Square, X } from "lucide-react";
+import { Copy, Minus, Square, X } from "lucide-react";
 import { isTauriRuntime } from "../lib/tauri";
 
 interface WindowTitlebarProps {
@@ -66,9 +66,11 @@ export function WindowTitlebar({ inVoiceCall = false }: WindowTitlebarProps) {
         data-tauri-drag-region
         className="flex items-center gap-2 pointer-events-none"
       >
-        <div className="w-4 h-4 rounded-[5px] bg-[#B91C1C] flex items-center justify-center shadow-[0_0_10px_rgba(185,28,28,0.45)]">
-          <AudioWaveform className="w-2.5 h-2.5 text-[#FAFAFA]" strokeWidth={2.2} />
-        </div>
+        <img
+          src="/logo-icon.png"
+          alt="Cafofo"
+          className="w-5 h-5 rounded-[5px] object-cover border border-[#EF4444]/30 shadow-[0_0_10px_rgba(185,28,28,0.4)]"
+        />
         <span className="font-mono text-[11px] font-semibold tracking-[0.14em] text-[#D4D4D8]">
           CAFOFO
         </span>

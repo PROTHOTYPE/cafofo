@@ -194,7 +194,7 @@ export function AppPreviewMockup() {
                 Palco de Voz & Transmissões
               </span>
               <span className="px-2 py-0.5 rounded-md bg-[#B91C1C]/20 border border-[#B91C1C]/40 font-mono text-[10px] text-[#F87171]">
-                AO VIVO • 1080p60
+                AO VIVO • 1440p60
               </span>
             </div>
 

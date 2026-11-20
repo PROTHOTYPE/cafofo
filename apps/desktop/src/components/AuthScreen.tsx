@@ -3,7 +3,6 @@ import * as Tabs from "@radix-ui/react-tabs";
 import { useAuthStore } from "@cafofo/core-logic";
 import {
   ArrowRight,
-  AudioWaveform,
   Lock,
   Mail,
   MonitorUp,
@@ -110,9 +109,11 @@ export function AuthScreen() {
         {/* Marca Superior */}
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#B91C1C] flex items-center justify-center shadow-crimson-glow border border-[#EF4444]/40 animate-radar-pulse-crimson">
-              <AudioWaveform className="w-5 h-5 text-white" strokeWidth={1.75} />
-            </div>
+            <img
+              src="/logo-icon.png"
+              alt="Cafofo"
+              className="w-10 h-10 rounded-xl object-cover shadow-crimson-glow border border-[#EF4444]/40 animate-radar-pulse-crimson"
+            />
             <div>
               <span className="text-sm font-semibold tracking-tight block">
                 CAFOFO
