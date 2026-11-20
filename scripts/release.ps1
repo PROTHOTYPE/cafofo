@@ -3,7 +3,9 @@
   [ValidateSet("none", "patch", "minor", "major")]
   [string]$Bump = "patch",
   [string]$Notes = "Atualização do Cafofo Desktop.",
-  [string]$Repo = "",
+  [string]$BucketName = "cafofo-releases",
+  [string]$PublicBaseUrl = "https://pub-88d3470004c540019838c149f440043a.r2.dev",
+  [switch]$SkipBuild,
   [switch]$SkipPublish
 )
 
@@ -23,7 +25,7 @@ $desktopPkg = Get-Content -Raw $DesktopPkgPath | ConvertFrom-Json
 
 $currentVersion = [string]$tauriConf.version
 if ([string]::IsNullOrWhiteSpace($Version)) {
-  if ($Bump -eq "none") {
+  if ($Bump -eq "none" -or $SkipBuild) {
     $Version = $currentVersion
   } else {
     $parts = $currentVersion.Split(".") | ForEach-Object { [int]$_ }
@@ -39,58 +41,43 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
   }
 }
 
-# Resolve OWNER/REPO via parâmetro, git remote ou endpoint do tauri.conf.json
-if ([string]::IsNullOrWhiteSpace($Repo)) {
-  try {
-    $remoteUrl = (git -C $RootDir remote get-url origin 2>$null)
-    if ($remoteUrl -match "github\.com[:/]([^/]+/[^/.]+?)(?:\.git)?$") {
-      $Repo = $Matches[1]
-    }
-  } catch {}
-}
-
-if ([string]::IsNullOrWhiteSpace($Repo)) {
-  $endpoint = $tauriConf.plugins.updater.endpoints | Select-Object -First 1
-  if ($endpoint -match "github\.com/([^/]+/[^/]+)/releases") {
-    $Repo = $Matches[1]
-  }
-}
-
-if ([string]::IsNullOrWhiteSpace($Repo) -or $Repo -eq "OWNER/REPO") {
-  Write-Warning "Repositório GitHub (OWNER/REPO) ainda não configurado. Passe -Repo 'usuario/repositorio' ou configure 'git remote add origin ...' e atualize apps/desktop/src-tauri/tauri.conf.json."
-  if ([string]::IsNullOrWhiteSpace($Repo)) {
-    $Repo = "OWNER/REPO"
-  }
-}
-
-Write-Host "==> Atualizando versão: $currentVersion -> $Version" -ForegroundColor Cyan
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
-$tauriConf.version = $Version
-[System.IO.File]::WriteAllText(
-  $TauriConfPath,
-  ($tauriConf | ConvertTo-Json -Depth 12) + "`n",
-  $utf8NoBom
-)
+if ($Version -ne $currentVersion) {
+  Write-Host "==> Atualizando versão: $currentVersion -> $Version" -ForegroundColor Cyan
 
-$desktopPkg.version = $Version
-[System.IO.File]::WriteAllText(
-  $DesktopPkgPath,
-  ($desktopPkg | ConvertTo-Json -Depth 12) + "`n",
-  $utf8NoBom
-)
+  $tauriConf.version = $Version
+  [System.IO.File]::WriteAllText(
+    $TauriConfPath,
+    ($tauriConf | ConvertTo-Json -Depth 12) + "`n",
+    $utf8NoBom
+  )
 
-Write-Host "==> Compilando e assinando instalador Windows (.exe)..." -ForegroundColor Cyan
-$env:TAURI_SIGNING_PRIVATE_KEY = (Get-Content -Raw $KeyPath).Trim()
+  $desktopPkg.version = $Version
+  [System.IO.File]::WriteAllText(
+    $DesktopPkgPath,
+    ($desktopPkg | ConvertTo-Json -Depth 12) + "`n",
+    $utf8NoBom
+  )
+} else {
+  Write-Host "==> Usando versão atual: $Version" -ForegroundColor Cyan
+}
 
-Push-Location $RootDir
-try {
-  corepack pnpm --filter @cafofo/desktop tauri build
-  if ($LASTEXITCODE -ne 0) {
-    throw "Falha no build do Tauri (exit code $LASTEXITCODE)."
+if (-not $SkipBuild) {
+  Write-Host "==> Compilando e assinando instalador Windows (.exe)..." -ForegroundColor Cyan
+  $env:TAURI_SIGNING_PRIVATE_KEY = (Get-Content -Raw $KeyPath).Trim()
+
+  Push-Location $RootDir
+  try {
+    corepack pnpm --filter @cafofo/desktop tauri build
+    if ($LASTEXITCODE -ne 0) {
+      throw "Falha no build do Tauri (exit code $LASTEXITCODE)."
+    }
+  } finally {
+    Pop-Location
   }
-} finally {
-  Pop-Location
+} else {
+  Write-Host "==> -SkipBuild ativo: usando artefatos já compilados." -ForegroundColor Yellow
 }
 
 $bundleCandidates = @(
@@ -100,7 +87,7 @@ $bundleCandidates = @(
 
 $nsisDir = $bundleCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $nsisDir) {
-  throw "Pasta de bundle NSIS não encontrada após o build."
+  throw "Pasta de bundle NSIS não encontrada."
 }
 
 $exeFile = Get-ChildItem -Path $nsisDir -Filter "Cafofo_${Version}_*setup.exe" | Select-Object -First 1
@@ -116,14 +103,18 @@ if (-not $sigFile) {
   throw "Arquivo de assinatura '$($exeFile.FullName).sig' não encontrado. Verifique bundle.createUpdaterArtifacts e TAURI_SIGNING_PRIVATE_KEY."
 }
 
+$baseUrl = $PublicBaseUrl.TrimEnd("/")
+$r2ReleasePrefix = "releases/v$Version"
+$downloadUrl = "$baseUrl/$r2ReleasePrefix/$($exeFile.Name)"
 $signature = (Get-Content -Raw $sigFile.FullName).Trim()
 $pubDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-$downloadUrl = "https://github.com/$Repo/releases/download/v$Version/$($exeFile.Name)"
+$fileSizeBytes = $exeFile.Length
 
 $latestManifest = [ordered]@{
   version   = $Version
   notes     = $Notes
   pub_date  = $pubDate
+  size      = $fileSizeBytes
   platforms = [ordered]@{
     "windows-x86_64" = [ordered]@{
       signature = $signature
@@ -139,36 +130,41 @@ $latestJsonPath = Join-Path $nsisDir "latest.json"
   $utf8NoBom
 )
 
-Write-Host "==> Artefatos gerados:" -ForegroundColor Green
-Write-Host "    Instalador : $($exeFile.FullName)"
+Write-Host "==> Artefatos prontos:" -ForegroundColor Green
+Write-Host "    Instalador : $($exeFile.FullName) ($([Math]::Round($fileSizeBytes / 1MB, 2)) MB)"
 Write-Host "    Assinatura : $($sigFile.FullName)"
 Write-Host "    Manifesto  : $latestJsonPath"
+Write-Host "    URL Final  : $downloadUrl"
 
 if ($SkipPublish) {
-  Write-Host "==> -SkipPublish ativo. Release não publicado no GitHub." -ForegroundColor Yellow
+  Write-Host "==> -SkipPublish ativo. Upload para o Cloudflare R2 ignorado." -ForegroundColor Yellow
   exit 0
 }
 
-if ($Repo -eq "OWNER/REPO") {
-  throw "Não é possível publicar no GitHub com Repo='OWNER/REPO'. Configure o remote do Git ou informe -Repo 'usuario/repositorio'."
-}
+Write-Host "==> Publicando artefatos no Cloudflare R2 (bucket '$BucketName')..." -ForegroundColor Cyan
 
-if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
-  throw "GitHub CLI ('gh') não encontrado no PATH. Instale via 'winget install GitHub.cli' e autentique com 'gh auth login'."
-}
+npx --yes wrangler r2 object put "$BucketName/$r2ReleasePrefix/$($exeFile.Name)" `
+  --file "$($exeFile.FullName)" `
+  --content-type "application/vnd.microsoft.portable-executable" `
+  --cache-control "public, max-age=31536000, immutable" `
+  --remote
+if ($LASTEXITCODE -ne 0) { throw "Falha ao enviar instalador .exe para o R2." }
 
-Write-Host "==> Publicando release v$Version em $Repo via GitHub CLI..." -ForegroundColor Cyan
-gh release create "v$Version" `
-  $exeFile.FullName `
-  $sigFile.FullName `
-  $latestJsonPath `
-  --repo $Repo `
-  --title "Cafofo v$Version" `
-  --notes $Notes `
-  --latest
+npx --yes wrangler r2 object put "$BucketName/$r2ReleasePrefix/$($sigFile.Name)" `
+  --file "$($sigFile.FullName)" `
+  --content-type "text/plain; charset=utf-8" `
+  --cache-control "public, max-age=31536000, immutable" `
+  --remote
+if ($LASTEXITCODE -ne 0) { throw "Falha ao enviar assinatura .sig para o R2." }
 
-if ($LASTEXITCODE -ne 0) {
-  throw "Falha ao publicar release no GitHub (exit code $LASTEXITCODE)."
-}
+npx --yes wrangler r2 object put "$BucketName/latest.json" `
+  --file "$latestJsonPath" `
+  --content-type "application/json; charset=utf-8" `
+  --cache-control "public, max-age=60" `
+  --remote
+if ($LASTEXITCODE -ne 0) { throw "Falha ao enviar latest.json para o R2." }
 
-Write-Host "==> Release v$Version publicado com sucesso!" -ForegroundColor Green
+Write-Host ""
+Write-Host "==> Release v$Version publicado com sucesso no Cloudflare R2!" -ForegroundColor Green
+Write-Host "    Manifesto : $baseUrl/latest.json" -ForegroundColor Cyan
+Write-Host "    Download  : $downloadUrl" -ForegroundColor Cyan

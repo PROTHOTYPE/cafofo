@@ -10,6 +10,7 @@
     "dev:desktop": "pnpm --filter @cafofo/desktop tauri dev",
     "dev:all": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-all.ps1",
     "deploy:cloud": "powershell -ExecutionPolicy Bypass -File scripts/deploy-cloud.ps1",
+    "deploy:landing": "corepack pnpm --filter @cafofo/landing build && npx --yes wrangler pages deploy apps/landing/dist --project-name=cafofo-landing --branch=main",
     "setup:supabase": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-supabase.ps1",
     "supabase": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/supabase.ps1",
     "db:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/db-push.ps1 -StatusOnly",

@@ -9,6 +9,7 @@ Roda tanto como app desktop nativo no Windows (Tauri v2 + Rust) quanto na web.
 ```text
 apps/
   desktop/     Interface React + Vite e camada nativa Tauri v2 (Windows)
+  landing/     Página de download conectada ao Cloudflare R2
   server/      Servidor Axum de sinalização WebSocket, LiveKit e bot de música
 crates/
   audio-engine/     Captura de áudio e supressão de ruído (RNNoise)

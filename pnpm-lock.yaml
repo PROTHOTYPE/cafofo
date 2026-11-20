@@ -87,6 +87,43 @@ importers:
         specifier: ^6.0.11
         version: 6.4.6(jiti@1.21.7)
 
+  apps/landing:
+    dependencies:
+      lucide-react:
+        specifier: ^1.73.0
+        version: 1.73.0(@types/react@19.3.0)(react@19.3.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.3.1
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.3.1(react@19.3.1)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitejs/plugin-react':
+        specifier: ^4.3.4
+        version: 4.7.0(vite@6.4.6(jiti@1.21.7))
+      autoprefixer:
+        specifier: ^10.4.20
+        version: 10.6.2(postcss@8.5.33)
+      postcss:
+        specifier: ^8.5.1
+        version: 8.5.33
+      tailwindcss:
+        specifier: ^3.4.17
+        version: 3.4.19
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.11
+        version: 6.4.6(jiti@1.21.7)
+
   packages/core-logic:
     dependencies:
       '@supabase/supabase-js':
