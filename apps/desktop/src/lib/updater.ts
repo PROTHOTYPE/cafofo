@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { isTauriRuntime } from "./tauri";
@@ -141,6 +142,28 @@ export function useAppUpdater(): AppUpdaterState {
   useEffect(() => {
     if (!supported) return;
     void checkForUpdates({ silent: true });
+
+    // Revalida silenciosamente a cada 4h enquanto o app fica aberto na bandeja
+    const intervalId = window.setInterval(
+      () => {
+        void checkForUpdates({ silent: true });
+      },
+      4 * 60 * 60 * 1000,
+    );
+
+    let unlisten: (() => void) | undefined;
+    void listen("cafofo://check-updates", () => {
+      void checkForUpdates({ silent: false });
+    })
+      .then((fn) => {
+        unlisten = fn;
+      })
+      .catch(() => {});
+
+    return () => {
+      window.clearInterval(intervalId);
+      unlisten?.();
+    };
   }, [supported, checkForUpdates]);
 
   return {

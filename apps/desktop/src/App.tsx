@@ -71,6 +71,7 @@ import {
 import { ProfileEditorModal } from "./components/ProfileEditorModal";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { VoiceControlsPanel } from "./components/VoiceControlsPanel";
+import { WindowTitlebar } from "./components/WindowTitlebar";
 import { copyPlainText } from "./lib/clipboard";
 import {
   ensureGameIconExtracted,
@@ -617,25 +618,31 @@ export function App() {
 
   if (!initialized) {
     return (
-      <div className="h-[100dvh] w-full overflow-x-hidden flex flex-col items-center justify-center bg-[#09090B] text-[#FAFAFA] gap-3 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] select-none animate-cafofo-boot">
-        <div className="w-11 h-11 rounded-2xl bg-[#B91C1C] flex items-center justify-center shadow-crimson-glow animate-radar-pulse-crimson">
-          <AudioWaveform className="w-5 h-5 text-white" strokeWidth={1.75} />
+      <div className="h-[100dvh] w-full overflow-x-hidden flex flex-col bg-[#09090B] text-[#FAFAFA] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] select-none animate-cafofo-boot">
+        <WindowTitlebar />
+        <div className="flex-1 flex flex-col items-center justify-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-[#B91C1C] flex items-center justify-center shadow-crimson-glow animate-radar-pulse-crimson">
+            <AudioWaveform className="w-5 h-5 text-white" strokeWidth={1.75} />
+          </div>
+          <span className="text-xs font-mono tracking-wider text-[#A1A1AA]">
+            INICIALIZANDO CAFOFO...
+          </span>
         </div>
-        <span className="text-xs font-mono tracking-wider text-[#A1A1AA]">
-          INICIALIZANDO CAFOFO...
-        </span>
       </div>
     );
   }
 
   if (authError && !user) {
     return (
-      <div className="h-[100dvh] w-full overflow-x-hidden flex items-center justify-center bg-[#09090B] text-[#FAFAFA] p-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-        <div className="max-w-lg w-full rounded-2xl bg-[#101014] hairline-box p-6 space-y-3 text-xs">
-          <h1 className="text-sm font-semibold text-[#F87171]">
-            Configuração Supabase Pendente
-          </h1>
-          <p className="text-[#A1A1AA] font-mono">{authError}</p>
+      <div className="h-[100dvh] w-full overflow-x-hidden flex flex-col bg-[#09090B] text-[#FAFAFA] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+        <WindowTitlebar />
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="max-w-lg w-full rounded-2xl bg-[#101014] hairline-box p-6 space-y-3 text-xs">
+            <h1 className="text-sm font-semibold text-[#F87171]">
+              Configuração Supabase Pendente
+            </h1>
+            <p className="text-[#A1A1AA] font-mono">{authError}</p>
+          </div>
         </div>
       </div>
     );
@@ -643,10 +650,13 @@ export function App() {
 
   if (!user) {
     return (
-      <>
-        <AuthScreen />
+      <div className="h-[100dvh] w-full flex flex-col bg-[#09090B] overflow-hidden">
+        <WindowTitlebar />
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <AuthScreen />
+        </div>
         <UpdateBanner updater={updater} />
-      </>
+      </div>
     );
   }
 
@@ -978,6 +988,7 @@ export function App() {
   return (
     <Tooltip.Provider delayDuration={150}>
       <div className="h-[100dvh] w-full max-w-full overflow-x-hidden overflow-y-hidden flex flex-col bg-[#09090B] text-[#FAFAFA] pt-[env(safe-area-inset-top)] animate-cafofo-boot">
+        <WindowTitlebar inVoiceCall={Boolean(activeVoiceChannelId)} />
         {/* Grid Arquitetural Principal com Bordas Hairline (02-grid-equalizador-primora.mp4) */}
         <div className="flex-1 flex min-h-0 relative">
           {/* Backdrop Mobile para Gavetas Deslizantes */}

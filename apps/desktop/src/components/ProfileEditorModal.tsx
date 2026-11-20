@@ -3,6 +3,11 @@ import * as Dialog from "@radix-ui/react-dialog";
 import * as Slider from "@radix-ui/react-slider";
 import * as Tabs from "@radix-ui/react-tabs";
 import {
+  disable as disableAutostart,
+  enable as enableAutostart,
+  isEnabled as isAutostartEnabled,
+} from "@tauri-apps/plugin-autostart";
+import {
   usePresenceStore,
   useProfileEditor,
   type AvatarFrameStyle,
@@ -15,6 +20,7 @@ import {
   Music,
   Palette,
   Play,
+  Power,
   RefreshCw,
   Scissors,
   Sparkles,
@@ -195,6 +201,33 @@ export function ProfileEditorModal({
   const [pendingAudioFile, setPendingAudioFile] = useState<File | null>(null);
   const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [autostartOn, setAutostartOn] = useState<boolean | null>(null);
+  const [autostartBusy, setAutostartBusy] = useState(false);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    void isAutostartEnabled()
+      .then((enabled) => setAutostartOn(enabled))
+      .catch(() => setAutostartOn(null));
+  }, []);
+
+  const handleToggleAutostart = async () => {
+    if (!isTauriRuntime() || autostartBusy || autostartOn === null) return;
+    setAutostartBusy(true);
+    try {
+      if (autostartOn) {
+        await disableAutostart();
+        setAutostartOn(false);
+      } else {
+        await enableAutostart();
+        setAutostartOn(true);
+      }
+    } catch {
+      // Mantém estado atual em caso de erro de permissão
+    } finally {
+      setAutostartBusy(false);
+    }
+  };
 
   const stopPreviewSound = () => {
     if (audioRef.current) {
@@ -1019,6 +1052,25 @@ export function ProfileEditorModal({
                               : updater.status === "error"
                                 ? "Tentar novamente"
                                 : "Verificar atualizações"}
+                      </span>
+                    </button>
+                  )}
+
+                  {isTauriRuntime() && autostartOn !== null && (
+                    <button
+                      type="button"
+                      disabled={autostartBusy}
+                      onClick={() => void handleToggleAutostart()}
+                      className={`min-h-[38px] px-3 py-1.5 rounded-xl border text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 ${
+                        autostartOn
+                          ? "bg-[#16161C] border-emerald-500/35 text-emerald-400 hover:bg-[#1E1E26]"
+                          : "bg-[#16161C] border-white/[0.08] text-[#A1A1AA] hover:text-[#FAFAFA]"
+                      }`}
+                      title="Iniciar Cafofo silenciosamente na bandeja ao ligar o Windows"
+                    >
+                      <Power className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      <span className="font-mono text-[11px]">
+                        {autostartOn ? "Autostart: ON" : "Autostart: OFF"}
                       </span>
                     </button>
                   )}
