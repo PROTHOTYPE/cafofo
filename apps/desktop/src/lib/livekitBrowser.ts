@@ -20,7 +20,6 @@ import {
   Track,
   VideoQuality,
 } from "livekit-client";
-import { isTauriRuntime } from "./tauri";
 import {
   createWebRnnoiseProcessor,
   isWebRnnoiseSupported,
@@ -468,12 +467,6 @@ async function applyRnnoiseToLocalMic(
   track: LocalAudioTrack,
   enabled: boolean,
 ): Promise<void> {
-  const nativeTauriRnnoise = isTauriRuntime();
-  if (nativeTauriRnnoise) {
-    updateSnapshot({ webRnnoiseActive: false });
-    return;
-  }
-
   if (enabled && isWebRnnoiseSupported()) {
     try {
       const procCtx = await ensureMicProcessorAudioContext();
@@ -610,8 +603,7 @@ async function createAndPublishBrowserMic(
   );
   if (isStale()) return;
 
-  const useWasmRnnoise =
-    !isTauriRuntime() && opts.rnnoiseEnabled && isWebRnnoiseSupported();
+  const useWasmRnnoise = opts.rnnoiseEnabled && isWebRnnoiseSupported();
 
   // Do NOT pass rigid sampleRate/channelCount constraints to getUserMedia: many
   // headsets/USB/virtual mics reject 48kHz/mono with OverconstrainedError.
@@ -983,7 +975,7 @@ export function createBrowserLiveKitTransport(): VoiceTransportAdapter {
       if (typeof rnnoiseEnabled === "boolean") {
         browserRnnoiseEnabled = rnnoiseEnabled;
       }
-      if (!isTauriRuntime() && browserRnnoiseEnabled) {
+      if (browserRnnoiseEnabled) {
         preloadWebRnnoise();
       }
 
@@ -1166,7 +1158,7 @@ export function createBrowserLiveKitTransport(): VoiceTransportAdapter {
       if (typeof rnnoiseEnabled === "boolean") {
         browserRnnoiseEnabled = rnnoiseEnabled;
       }
-      if (!isTauriRuntime() && browserRnnoiseEnabled) {
+      if (browserRnnoiseEnabled) {
         preloadWebRnnoise();
       }
       if (!activeRoom || activeRoom.state !== ConnectionState.Connected) {

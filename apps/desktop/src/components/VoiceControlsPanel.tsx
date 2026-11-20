@@ -53,7 +53,6 @@ import {
 } from "../lib/soundEffects";
 import {
   getAudioStatus,
-  isTauriRuntime,
   listAudioInputDevices,
   listCaptureWindows,
   type AudioDeviceInfo,
@@ -158,7 +157,8 @@ export function VoiceControlsPanel({
   const setScreenVolume = useVoiceStore((s) => s.setScreenVolume);
 
   const browserMedia = useBrowserRemoteMedia();
-  const isTauri = isTauriRuntime();
+  // Voz/mídia unificada no motor LiveKit WebRTC (WebView2 no Desktop + Browser na Web)
+  const isTauri = false;
   const browserScreenShareSupported = canBrowserScreenShare();
   const [systemSoundVolume, setSystemSoundVolume] = useSystemSoundVolume();
 

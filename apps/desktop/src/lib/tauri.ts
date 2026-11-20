@@ -176,27 +176,17 @@ export function listenGamePresenceChanged(
 }
 
 export function createTauriVoiceTransport(): VoiceTransportAdapter {
+  const webRtcTransport = createBrowserLiveKitTransport();
   if (!isTauriRuntime()) {
-    return createBrowserLiveKitTransport();
+    return webRtcTransport;
   }
 
-  let connectedRoomName: string | null = null;
-
+  // No Desktop Windows (WebView2), usa o motor LiveKit WebRTC completo para
+  // garantir reprodução de áudio remoto, controle de volume individual (0-200%),
+  // visualização de transmissões 16:9 e RNNoise WASM, mantendo recursos nativos
+  // como som de entrada, Game Detector, bandeja do sistema e auto-update.
   return {
-    isConnectedToRoom: (roomName: string) =>
-      Boolean(connectedRoomName && connectedRoomName === roomName),
-    joinVoiceRoom: async (params) => {
-      await joinVoiceRoom(params);
-      connectedRoomName = params.roomName ?? "__connected__";
-    },
-    leaveVoiceRoom: async () => {
-      connectedRoomName = null;
-      await leaveVoiceRoom();
-    },
-    setVoiceControls,
-    setPushToTalkKey,
-    startWindowShare,
-    stopWindowShare,
+    ...webRtcTransport,
     playEntrySound,
   };
 }
