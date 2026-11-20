@@ -1,0 +1,575 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Regra 90/8/2 — Obsidiana Arquitetural (90%) */
+  --bg-obsidian-base: #09090B;
+  --bg-obsidian-sidebar: #101014;
+  --bg-obsidian-stage: #16161C;
+  --bg-obsidian-elevated: #1E1E26;
+
+  /* Bordas Hairline & Tipografia Neutra (8%) */
+  --border-hairline: rgba(255, 255, 255, 0.07);
+  --border-hairline-strong: rgba(255, 255, 255, 0.13);
+  --text-primary: #FAFAFA;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+
+  /* Vermelho Profundo / Rubi (2%) */
+  --accent-crimson: #B91C1C;
+  --accent-crimson-hover: #991B1B;
+  --badge-live-bg: #7F1D1D;
+  --badge-live-border: #EF4444;
+  --alert-non-destructive-bg: #1E1E26;
+  --alert-non-destructive-fg: #F87171;
+  --header-radial-glow: rgba(185, 28, 28, 0.14);
+}
+
+@layer base {
+  * {
+    border-color: var(--border-hairline);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    height: 100dvh;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    background-color: var(--bg-obsidian-base);
+    color: var(--text-primary);
+    font-family: "Inter", "Geist", system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.011em;
+  }
+
+  code,
+  pre,
+  .font-mono {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    font-feature-settings: "tnum" on, "zero" on;
+  }
+}
+
+/* Scrollbars Customizadas Ultrafinas com Thumb em Carmesim Escuro */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(185, 28, 28, 0.45) rgba(9, 9, 11, 0.35);
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(9, 9, 11, 0.25);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(127, 29, 29, 0.75) 0%,
+    rgba(185, 28, 28, 0.65) 100%
+  );
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(185, 28, 28, 0.95) 0%,
+    rgba(239, 68, 68, 0.85) 100%
+  );
+}
+
+@layer utilities {
+  /* Bordas Hairline (02-grid-equalizador-primora.mp4) */
+  .hairline-b {
+    border-bottom: 1px solid var(--border-hairline);
+  }
+  .hairline-t {
+    border-top: 1px solid var(--border-hairline);
+  }
+  .hairline-l {
+    border-left: 1px solid var(--border-hairline);
+  }
+  .hairline-r {
+    border-right: 1px solid var(--border-hairline);
+  }
+  .hairline-box {
+    border: 1px solid var(--border-hairline);
+  }
+
+  /* Brilho Radial Difuso em Cabeçalhos (05-chat-input-glow-handshake.png) */
+  .crimson-header-glow {
+    background-image: radial-gradient(
+      ellipse 70% 120% at 18% 0%,
+      var(--header-radial-glow) 0%,
+      rgba(185, 28, 28, 0) 75%
+    );
+  }
+
+  /* Arte Luminosa Rubi Profundo 50/50 (03-card-perfil-login-soundcore.mp4) */
+  .ruby-refraction-canvas {
+    background-color: #09090B;
+    background-image:
+      radial-gradient(circle at 22% 28%, rgba(185, 28, 28, 0.36) 0%, rgba(127, 29, 29, 0.14) 38%, transparent 70%),
+      radial-gradient(circle at 78% 76%, rgba(185, 28, 28, 0.24) 0%, rgba(24, 24, 30, 0.4) 48%, transparent 75%),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, transparent 50%, rgba(185, 28, 28, 0.08) 100%);
+  }
+
+  .architectural-grid-overlay {
+    background-size: 32px 32px;
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  }
+
+  /* Scoped Glass Aprimorado (Obsidiana & Carmesim) */
+  .scoped-glass {
+    background-color: rgba(16, 16, 20, 0.8);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 30px rgba(185, 28, 28, 0.15);
+  }
+
+  /* Botão Principal / Pílula com Gradiente Carmesim Deslizante e Feedback Tátil */
+  .btn-crimson-vivid {
+    background-image: linear-gradient(
+      135deg,
+      #B91C1C 0%,
+      #DC2626 50%,
+      #991B1B 100%
+    );
+    background-size: 200% 200%;
+    color: #FAFAFA;
+    transition: all 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .btn-crimson-vivid:hover:not(:disabled) {
+    background-position: 100% 50%;
+    box-shadow: 0 0 20px rgba(185, 28, 28, 0.4);
+    transform: scale(1.01);
+  }
+
+  .btn-crimson-vivid:active:not(:disabled) {
+    transform: scale(0.985);
+  }
+
+  /* Badges Adesivo Recortado / Die-Cut Sticker (04-badges-stickers.mp4) */
+  .die-cut-sticker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    border: 1.5px solid rgba(255, 255, 255, 0.85);
+    box-shadow:
+      0 3px 10px rgba(0, 0, 0, 0.65),
+      0 0 0 1px rgba(9, 9, 11, 0.9);
+    transform: rotate(-1.5deg);
+    transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .die-cut-sticker:nth-child(even) {
+    transform: rotate(1.2deg);
+  }
+
+  .die-cut-sticker:hover {
+    transform: rotate(0deg) scale(1.04);
+  }
+
+  /* Regra de Botão Não-Destrutivo para Mute / Deafen / Desconectar */
+  .btn-non-destructive-active {
+    background-color: #1E1E26;
+    color: #F87171;
+    border: 1px solid rgba(248, 113, 113, 0.28);
+  }
+
+  /* Safe-area & dvh mobile (iPhone Dynamic Island / Galaxy / Gestures) */
+  .h-dvh-safe {
+    height: 100vh;
+    height: 100dvh;
+  }
+  .min-h-dvh-safe {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Animações de Boot, Modal, Popover, Radar & Pulso Cyber */
+  .animate-cafofo-boot {
+    animation: cafofo-boot 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-cyber-pulse {
+    animation: cyber-pulse 6s ease-in-out infinite;
+  }
+
+  .animate-radar-pulse {
+    animation: radar-pulse 1.75s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+
+  .animate-radar-pulse-crimson {
+    animation: radar-pulse-crimson 1.65s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+
+  /* Transição suave para painéis/modais em containers flex (não sobrescreve Popper) */
+  .animate-cyber-slide {
+    animation: cyber-slide 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-modal-in {
+    animation: cafofo-modal-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Segura para elementos Radix Popper (Popover / ContextMenu) pois não altera transform */
+  .animate-popover-in {
+    animation: cafofo-popover-in 160ms ease-out both;
+  }
+
+  .animated-gradient-border {
+    position: relative;
+    background-image:
+      linear-gradient(var(--bg-obsidian-sidebar), var(--bg-obsidian-sidebar)),
+      linear-gradient(
+        125deg,
+        rgba(185, 28, 28, 0.9) 0%,
+        rgba(239, 68, 68, 0.42) 35%,
+        rgba(255, 255, 255, 0.09) 65%,
+        rgba(185, 28, 28, 0.9) 100%
+      );
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    background-size: 100% 100%, 240% 240%;
+    border: 1px solid transparent;
+    animation: crimson-border-sweep 5s ease infinite;
+  }
+
+  .crimson-header-animated-border {
+    position: relative;
+  }
+
+  .crimson-header-animated-border::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(185, 28, 28, 0.78) 35%,
+      rgba(239, 68, 68, 0.92) 50%,
+      rgba(185, 28, 28, 0.78) 65%,
+      rgba(255, 255, 255, 0.06) 100%
+    );
+    background-size: 220% 100%;
+    animation: crimson-border-sweep 6s linear infinite;
+    pointer-events: none;
+  }
+
+  /* Destaque temporário ao pular para mensagem respondida (Jump-to-Reply) */
+  .animate-message-jump-highlight {
+    animation: message-jump-highlight 2.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+}
+
+/* Modelos de Cartão Animados & Texturizados (Fora de @layer para nunca sofrer tree-shaking) */
+.card-theme-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.card-theme-obsidian-glass {
+  background:
+    linear-gradient(
+      125deg,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0.04) 28%,
+      transparent 48%,
+      rgba(255, 255, 255, 0.18) 68%,
+      rgba(255, 255, 255, 0.03) 82%,
+      transparent 100%
+    );
+  background-size: 240% 240%;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+  animation: card-glass-sheen 6s ease-in-out infinite;
+}
+
+.card-theme-liquid-water {
+  background:
+    radial-gradient(
+      circle at 20% 30%,
+      rgba(56, 189, 248, 0.45) 0%,
+      rgba(14, 165, 233, 0.18) 38%,
+      transparent 68%
+    ),
+    radial-gradient(
+      circle at 80% 75%,
+      rgba(34, 211, 238, 0.42) 0%,
+      rgba(6, 182, 212, 0.16) 42%,
+      transparent 72%
+    ),
+    linear-gradient(
+      120deg,
+      transparent 0%,
+      rgba(125, 211, 252, 0.28) 45%,
+      rgba(56, 189, 248, 0.12) 60%,
+      transparent 100%
+    );
+  background-size: 200% 200%, 200% 200%, 260% 260%;
+  animation: card-liquid-flow 7s ease-in-out infinite;
+}
+
+.card-theme-crimson-fire {
+  background:
+    radial-gradient(
+      ellipse 95% 65% at 50% 105%,
+      rgba(239, 68, 68, 0.58) 0%,
+      rgba(185, 28, 28, 0.34) 44%,
+      transparent 78%
+    ),
+    radial-gradient(
+      circle at 22% 85%,
+      rgba(249, 115, 22, 0.44) 0%,
+      transparent 52%
+    ),
+    radial-gradient(
+      circle at 78% 88%,
+      rgba(220, 38, 38, 0.44) 0%,
+      transparent 54%
+    );
+  background-size: 135% 135%;
+  animation: card-fire-ember 3.8s ease-in-out infinite;
+}
+
+.card-theme-cyber-hologram {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.08) 0px,
+      rgba(255, 255, 255, 0.08) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    linear-gradient(
+      130deg,
+      rgba(168, 85, 247, 0.38) 0%,
+      rgba(6, 182, 212, 0.34) 33%,
+      rgba(236, 72, 153, 0.34) 66%,
+      rgba(168, 85, 247, 0.38) 100%
+    );
+  background-size: 100% 100%, 260% 260%;
+  animation: card-holo-shift 5.5s linear infinite;
+}
+
+.card-theme-neon-grid {
+  background:
+    linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.14) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.14) 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      ellipse 90% 60% at 50% 0%,
+      color-mix(in srgb, var(--card-accent, #B91C1C) 52%, transparent) 0%,
+      transparent 75%
+    );
+  background-size: 18px 18px, 18px 18px, 100% 100%;
+  animation: card-neon-grid-drift 9s linear infinite;
+}
+
+@keyframes cafofo-boot {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes cafofo-modal-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes cafofo-popover-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes cyber-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes radar-pulse {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(16, 185, 129, 0.65),
+      0 0 0 1.5px rgba(16, 185, 129, 0.9);
+  }
+  70% {
+    box-shadow:
+      0 0 0 8px rgba(16, 185, 129, 0),
+      0 0 0 1.5px rgba(16, 185, 129, 0.95);
+  }
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(16, 185, 129, 0),
+      0 0 0 1px rgba(16, 185, 129, 0.7);
+  }
+}
+
+@keyframes radar-pulse-crimson {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(239, 68, 68, 0.68),
+      0 0 0 1.5px rgba(185, 28, 28, 0.95);
+  }
+  70% {
+    box-shadow:
+      0 0 0 9px rgba(239, 68, 68, 0),
+      0 0 0 1.5px rgba(239, 68, 68, 0.95);
+  }
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(239, 68, 68, 0),
+      0 0 0 1px rgba(185, 28, 28, 0.75);
+  }
+}
+
+@keyframes cyber-slide {
+  0% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes crimson-border-sweep {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes message-jump-highlight {
+  0% {
+    background-color: rgba(185, 28, 28, 0.28);
+    box-shadow: inset 2px 0 0 #EF4444, 0 0 0 1px rgba(239, 68, 68, 0.45);
+  }
+  65% {
+    background-color: rgba(185, 28, 28, 0.14);
+    box-shadow: inset 2px 0 0 #EF4444, 0 0 0 1px rgba(239, 68, 68, 0.25);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: inset 2px 0 0 transparent, 0 0 0 1px transparent;
+  }
+}
+
+@keyframes card-glass-sheen {
+  0%,
+  100% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+}
+
+@keyframes card-liquid-flow {
+  0%,
+  100% {
+    background-position: 0% 50%, 100% 50%, 0% 0%;
+  }
+  50% {
+    background-position: 100% 40%, 0% 60%, 100% 100%;
+  }
+}
+
+@keyframes card-fire-ember {
+  0%,
+  100% {
+    opacity: 0.78;
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.03);
+  }
+}
+
+@keyframes card-holo-shift {
+  0% {
+    background-position: 0 0, 0% 50%;
+  }
+  50% {
+    background-position: 0 0, 100% 50%;
+  }
+  100% {
+    background-position: 0 0, 0% 50%;
+  }
+}
+
+@keyframes card-neon-grid-drift {
+  0% {
+    background-position: 0 0, 0 0, 0 0;
+  }
+  100% {
+    background-position: 22px 22px, 22px 22px, 0 0;
+  }
+}

@@ -1,0 +1,33 @@
+[package]
+name = "cafofo-desktop"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace]
+
+[lib]
+name = "cafofo_desktop_lib"
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+cafofo-audio-engine = { path = "../../../crates/audio-engine" }
+cafofo-game-detector = { path = "../../../crates/game-detector" }
+cafofo-protocol = { path = "../../../crates/protocol" }
+cafofo-screen-capture = { path = "../../../crates/screen-capture" }
+livekit = { version = "0.11", features = ["native-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["native-tls"] }
+ringbuf = "0.4"
+rodio = "0.20"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-process = "2"
+tauri-plugin-updater = "2"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
