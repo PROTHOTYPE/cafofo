@@ -142,14 +142,27 @@ async function musicApiFetch<T>(
   return (await resp.json()) as T;
 }
 
-function prewarmVideoAudio(videoId: string): void {
+async function prepareVideoAudio(videoId: string): Promise<void> {
   const token = useAuthStore.getState().session?.access_token;
   if (!token || !videoId) return;
   const base = resolveMusicApiBaseUrl();
-  void fetch(`${base}/api/music/prepare/${encodeURIComponent(videoId)}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  }).catch(() => {});
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25_000);
+  try {
+    await fetch(`${base}/api/music/prepare/${encodeURIComponent(videoId)}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    });
+  } catch {
+    // Mesmo se falhar/timeout, deixa o <audio> tentar o stream direto
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function prewarmVideoAudio(videoId: string): void {
+  void prepareVideoAudio(videoId);
 }
 
 function broadcastMusicSnapshot(snapshot: MusicRoomSnapshot): void {
@@ -531,32 +544,41 @@ export const useMusicStore = create<MusicState>((set, get) => ({
     };
 
     const advanced = advanceExpiredTracks(currentSnapshot).snapshot;
-    let nextSnapshot: MusicRoomSnapshot;
-    if (!advanced.current) {
-      nextSnapshot = {
-        ...advanced,
-        current: nextTrack,
-        is_playing: true,
-        started_at_ms: now,
-        paused_offset_sec: 0,
-        server_now_ms: now,
-        version: Math.max(state.version, advanced.version) + 1,
-      };
-    } else {
-      if (advanced.queue.length >= MAX_QUEUE_LEN) {
-        throw new Error(`Fila cheia (máximo de ${MAX_QUEUE_LEN} músicas).`);
-      }
-      nextSnapshot = {
-        ...advanced,
-        queue: [...advanced.queue, nextTrack],
-        server_now_ms: now,
-        version: Math.max(state.version, advanced.version) + 1,
-      };
+    const startsImmediately = !advanced.current;
+    if (!startsImmediately && advanced.queue.length >= MAX_QUEUE_LEN) {
+      throw new Error(`Fila cheia (máximo de ${MAX_QUEUE_LEN} músicas).`);
     }
 
     set({ loadingAction: true, error: null });
     try {
-      get().applySnapshot(nextSnapshot);
+      // Aguarda o áudio ficar pronto em cache no servidor ANTES de iniciar o
+      // relógio (started_at_ms), garantindo que todos comecem exatamente do 0:00.
+      if (startsImmediately) {
+        await prepareVideoAudio(nextTrack.video_id);
+      } else {
+        prewarmVideoAudio(nextTrack.video_id);
+      }
+
+      const readyNow = Date.now();
+      const latest = get();
+      const nextSnapshot: MusicRoomSnapshot = startsImmediately
+        ? {
+            ...advanced,
+            current: nextTrack,
+            is_playing: true,
+            started_at_ms: readyNow,
+            paused_offset_sec: 0,
+            server_now_ms: readyNow,
+            version: Math.max(latest.version, advanced.version) + 1,
+          }
+        : {
+            ...advanced,
+            queue: [...advanced.queue, nextTrack],
+            server_now_ms: readyNow,
+            version: Math.max(latest.version, advanced.version) + 1,
+          };
+
+      get().applySnapshot(nextSnapshot, { forceSeek: startsImmediately });
       broadcastMusicSnapshot(nextSnapshot);
       await persistRoomSnapshot(nextSnapshot);
     } catch (err) {
@@ -606,23 +628,26 @@ export const useMusicStore = create<MusicState>((set, get) => ({
     const roomId = state.boundRoomId;
     if (!roomId) return;
 
-    const now = Date.now();
     const nextQueue = [...state.queue];
     const nextTrack = nextQueue.shift() ?? null;
 
-    const nextSnapshot: MusicRoomSnapshot = {
-      room_id: roomId,
-      current: nextTrack,
-      queue: nextQueue,
-      is_playing: Boolean(nextTrack),
-      started_at_ms: nextTrack ? now : 0,
-      paused_offset_sec: 0,
-      server_now_ms: now,
-      version: state.version + 1,
-    };
-
     set({ loadingAction: true, error: null });
     try {
+      if (nextTrack) {
+        await prepareVideoAudio(nextTrack.video_id);
+      }
+      const readyNow = Date.now();
+      const nextSnapshot: MusicRoomSnapshot = {
+        room_id: roomId,
+        current: nextTrack,
+        queue: nextQueue,
+        is_playing: Boolean(nextTrack),
+        started_at_ms: nextTrack ? readyNow : 0,
+        paused_offset_sec: 0,
+        server_now_ms: readyNow,
+        version: get().version + 1,
+      };
+
       get().applySnapshot(nextSnapshot, { forceSeek: true });
       broadcastMusicSnapshot(nextSnapshot);
       await persistRoomSnapshot(nextSnapshot);
