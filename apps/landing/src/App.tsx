@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import {
+  AnimatePresence,
+  motion,
+  useScroll,
+  useSpring,
+} from "framer-motion";
+import {
   ArrowUpRight,
+  Check,
   Cpu,
   Disc3,
   Download,
@@ -14,6 +21,7 @@ import {
 } from "lucide-react";
 import { AppPreviewMockup } from "./components/AppPreviewMockup";
 import { BrandMark } from "./components/BrandMark";
+import { SpotlightCard } from "./components/SpotlightCard";
 
 const RELEASE_MANIFEST_URL =
   "https://pub-88d3470004c540019838c149f440043a.r2.dev/latest.json";
@@ -35,7 +43,7 @@ interface LatestReleaseManifest {
 const FALLBACK_RELEASE: LatestReleaseManifest = {
   version: "0.1.0",
   notes:
-    "Primeira versão oficial do Cafofo Desktop para Windows com voz RNNoise, palco de transmissões 16:9, bot de música sincronizado e auto-update.",
+    "Primeira versão oficial do Cafofo Desktop para Windows com voz RNNoise, palco de transmissões 16:9, bot de música sincronizado e auto-update via Cloudflare R2.",
   size: 12_373_196,
   platforms: {
     "windows-x86_64": {
@@ -99,8 +107,37 @@ const FEATURES = [
   },
 ];
 
+const HERO_CONTAINER = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.05,
+    },
+  },
+};
+
+const HERO_ITEM = {
+  hidden: { opacity: 0, y: 18 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const },
+  },
+};
+
 export function App() {
   const [release, setRelease] = useState<LatestReleaseManifest>(FALLBACK_RELEASE);
+  const [downloadPulse, setDownloadPulse] = useState(false);
+  const [activeInstallStep, setActiveInstallStep] = useState(0);
+
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 220,
+    damping: 30,
+    restDelta: 0.001,
+  });
 
   useEffect(() => {
     let active = true;
@@ -125,12 +162,29 @@ export function App() {
   const pubDateFormatted = formatDatePtBr(release.pub_date);
   const installerSize = formatSizeMb(release.size);
 
+  const handleDownloadClick = () => {
+    setDownloadPulse(true);
+    window.setTimeout(() => setDownloadPulse(false), 2600);
+  };
+
+  const installSteps = [
+    `Execute o instalador Cafofo_${release.version}_x64-setup.exe`,
+    'Clique em "Mais informações" e depois em "Executar assim mesmo"',
+    "As próximas atualizações chegam automaticamente dentro do app",
+  ];
+
   return (
     <div className="min-h-screen bg-[#09090B] text-[#FAFAFA] relative overflow-x-hidden">
-      {/* Glow ambiental sutil no topo */}
+      {/* Barra de progresso de scroll carmesim */}
+      <motion.div
+        style={{ scaleX }}
+        className="fixed top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#991B1B] via-[#EF4444] to-[#F87171] origin-left z-50"
+      />
+
+      {/* Grid + Glow ambiente animado no topo */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[560px] obsidian-grid"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[580px] obsidian-grid"
         style={{
           maskImage:
             "radial-gradient(ellipse 75% 65% at 50% 0%, black 35%, transparent 100%)",
@@ -138,15 +192,29 @@ export function App() {
             "radial-gradient(ellipse 75% 65% at 50% 0%, black 35%, transparent 100%)",
         }}
       />
-      <div
+      <motion.div
         aria-hidden="true"
-        className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 w-[680px] h-[360px] rounded-full bg-[#B91C1C]/20 blur-[130px]"
+        animate={{
+          scale: [1, 1.09, 1],
+          opacity: [0.18, 0.28, 0.18],
+        }}
+        transition={{
+          duration: 7,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="pointer-events-none absolute -top-36 left-1/2 -translate-x-1/2 w-[740px] h-[380px] rounded-full bg-[#B91C1C] blur-[140px]"
       />
 
       {/* Navbar */}
       <header className="sticky top-0 z-40 scoped-glass border-b border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between gap-4">
-          <a href="#" className="flex items-center gap-2.5 group">
+          <motion.a
+            href="#"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex items-center gap-2.5"
+          >
             <BrandMark size="sm" />
             <span className="font-semibold tracking-tight text-base">
               Cafofo
@@ -154,7 +222,7 @@ export function App() {
             <span className="hidden sm:inline-block px-2 py-0.5 rounded-md bg-[#16161C] hairline-box font-mono text-[10px] text-[#A1A1AA]">
               v{release.version}
             </span>
-          </a>
+          </motion.a>
 
           <nav className="hidden md:flex items-center gap-7 text-xs text-[#A1A1AA]">
             <a href="#recursos" className="hover:text-[#FAFAFA] transition-colors">
@@ -169,22 +237,27 @@ export function App() {
           </nav>
 
           <div className="flex items-center gap-2.5">
-            <a
+            <motion.a
               href={WEB_APP_URL}
               target="_blank"
               rel="noreferrer"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.96 }}
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#16161C] hover:bg-[#1E1E26] hairline-box text-xs text-[#A1A1AA] hover:text-[#FAFAFA] transition-colors"
             >
               <Globe className="w-3.5 h-3.5" />
               <span>Versão Web</span>
-            </a>
-            <a
+            </motion.a>
+            <motion.a
               href={downloadUrl}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl btn-crimson-vivid text-xs font-medium text-[#FAFAFA] transition-all"
+              onClick={handleDownloadClick}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.95 }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl btn-crimson-vivid text-xs font-medium text-[#FAFAFA]"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Baixar</span>
-            </a>
+            </motion.a>
           </div>
         </div>
       </header>
@@ -192,49 +265,103 @@ export function App() {
       <main className="relative z-10">
         {/* Hero */}
         <section className="max-w-6xl mx-auto px-5 pt-16 pb-14 md:pt-24 md:pb-20">
-          <div className="max-w-3xl mx-auto text-center space-y-6">
-            <div className="inline-flex flex-wrap items-center justify-center gap-2 px-3 py-1 rounded-full bg-[#101014] hairline-box font-mono text-[11px] text-[#A1A1AA]">
-              <span className="w-2 h-2 rounded-full bg-[#EF4444]" />
-              <span>WINDOWS 10 / 11 (x64)</span>
-              <span className="text-[#3F3F46]">•</span>
-              <span className="text-[#FAFAFA]">v{release.version}</span>
-              <span className="text-[#3F3F46]">•</span>
-              <span>{installerSize}</span>
-            </div>
+          <motion.div
+            variants={HERO_CONTAINER}
+            initial="hidden"
+            animate="show"
+            className="max-w-3xl mx-auto text-center space-y-6"
+          >
+            <motion.div variants={HERO_ITEM}>
+              <div className="inline-flex flex-wrap items-center justify-center gap-2 px-3.5 py-1 rounded-full bg-[#101014] hairline-box font-mono text-[11px] text-[#A1A1AA]">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#EF4444] opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#EF4444]" />
+                </span>
+                <span>WINDOWS 10 / 11 (x64)</span>
+                <span className="text-[#3F3F46]">•</span>
+                <span className="text-[#FAFAFA]">v{release.version}</span>
+                <span className="text-[#3F3F46]">•</span>
+                <span>{installerSize}</span>
+              </div>
+            </motion.div>
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.08] text-[#FAFAFA]">
+            <motion.h1
+              variants={HERO_ITEM}
+              className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.07] text-[#FAFAFA]"
+            >
               Seu espaço de voz, tela e música.{" "}
-              <span className="text-[#EF4444]">Leve de verdade.</span>
-            </h1>
+              <span className="bg-gradient-to-r from-[#EF4444] via-[#F87171] to-[#DC2626] bg-clip-text text-transparent">
+                Leve de verdade.
+              </span>
+            </motion.h1>
 
-            <p className="text-base sm:text-lg text-[#A1A1AA] max-w-2xl mx-auto leading-relaxed">
+            <motion.p
+              variants={HERO_ITEM}
+              className="text-base sm:text-lg text-[#A1A1AA] max-w-2xl mx-auto leading-relaxed"
+            >
               O Cafofo roda nativo em Rust + Tauri para não comer seu FPS nem sua
               RAM enquanto você joga. Entre na call, compartilhe a tela em 16:9 e
               solte uma música sincronizada com a sala.
-            </p>
+            </motion.p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-              <a
+            <motion.div
+              variants={HERO_ITEM}
+              className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2"
+            >
+              <motion.a
                 href={downloadUrl}
-                className="w-full sm:w-auto min-h-[48px] px-6 py-3 rounded-2xl btn-crimson-vivid text-sm font-semibold text-[#FAFAFA] inline-flex items-center justify-center gap-2.5 transition-all"
+                onClick={handleDownloadClick}
+                whileHover={{ scale: 1.03, y: -2 }}
+                whileTap={{ scale: 0.96 }}
+                transition={{ type: "spring", stiffness: 420, damping: 24 }}
+                className="w-full sm:w-auto min-h-[50px] px-7 py-3 rounded-2xl btn-crimson-vivid text-sm font-semibold text-[#FAFAFA] inline-flex items-center justify-center gap-2.5"
               >
-                <Download className="w-4 h-4" strokeWidth={2} />
-                <span>Baixar para Windows (.exe)</span>
-              </a>
+                <AnimatePresence mode="wait" initial={false}>
+                  {downloadPulse ? (
+                    <motion.span
+                      key="downloaded"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      className="inline-flex items-center gap-2"
+                    >
+                      <Check className="w-4 h-4 text-emerald-300" strokeWidth={2.5} />
+                      <span>Download iniciado • v{release.version}</span>
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key="download"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      className="inline-flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" strokeWidth={2} />
+                      <span>Baixar para Windows (.exe)</span>
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.a>
 
-              <a
+              <motion.a
                 href={WEB_APP_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="w-full sm:w-auto min-h-[48px] px-6 py-3 rounded-2xl bg-[#101014] hover:bg-[#16161C] hairline-box text-sm font-medium text-[#FAFAFA] inline-flex items-center justify-center gap-2 transition-colors"
+                whileHover={{ scale: 1.03, y: -2 }}
+                whileTap={{ scale: 0.96 }}
+                transition={{ type: "spring", stiffness: 420, damping: 24 }}
+                className="w-full sm:w-auto min-h-[50px] px-6 py-3 rounded-2xl bg-[#101014] hover:bg-[#16161C] hairline-box text-sm font-medium text-[#FAFAFA] inline-flex items-center justify-center gap-2 transition-colors"
               >
                 <Globe className="w-4 h-4 text-[#A1A1AA]" />
                 <span>Abrir no Navegador</span>
                 <ArrowUpRight className="w-4 h-4 text-[#71717A]" />
-              </a>
-            </div>
+              </motion.a>
+            </motion.div>
 
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-2 font-mono text-[11px] text-[#71717A]">
+            <motion.div
+              variants={HERO_ITEM}
+              className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-2 font-mono text-[11px] text-[#71717A]"
+            >
               <span className="inline-flex items-center gap-1.5">
                 <Cpu className="w-3.5 h-3.5 text-[#EF4444]" />
                 Instalador de {installerSize}
@@ -247,131 +374,152 @@ export function App() {
                 <RefreshCw className="w-3.5 h-3.5 text-[#EF4444]" />
                 Auto-update nativo
               </span>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
-          {/* Mockup fiel do app */}
+          {/* Mockup interativo do app */}
           <div className="mt-14 md:mt-16">
             <AppPreviewMockup />
           </div>
         </section>
 
-        {/* Recursos */}
+        {/* Recursos com Spotlight seguindo o cursor */}
         <section
           id="recursos"
           className="max-w-6xl mx-auto px-5 py-16 border-t border-white/[0.06]"
         >
-          <div className="max-w-2xl mb-10 space-y-2">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.45 }}
+            className="max-w-2xl mb-10 space-y-2"
+          >
             <p className="font-mono text-xs uppercase tracking-widest text-[#EF4444]">
               Feito para jogar junto
             </p>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
               Tudo o que a call precisa, sem peso morto.
             </h2>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {FEATURES.map((item) => {
+            {FEATURES.map((item, idx) => {
               const Icon = item.icon;
               return (
-                <div
-                  key={item.title}
-                  className="rounded-2xl bg-[#101014] hairline-box p-5 space-y-3 hover:border-[#B91C1C]/40 transition-colors"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-[#B91C1C]/15 border border-[#B91C1C]/35 flex items-center justify-center">
-                    <Icon className="w-4 h-4 text-[#EF4444]" strokeWidth={1.75} />
+                <SpotlightCard key={item.title} delay={idx * 0.05} className="p-5">
+                  <div className="space-y-3">
+                    <div className="w-9 h-9 rounded-xl bg-[#B91C1C]/15 border border-[#B91C1C]/35 flex items-center justify-center">
+                      <Icon className="w-4 h-4 text-[#EF4444]" strokeWidth={1.75} />
+                    </div>
+                    <h3 className="text-sm font-semibold text-[#FAFAFA]">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-[#A1A1AA] leading-relaxed">
+                      {item.description}
+                    </p>
                   </div>
-                  <h3 className="text-sm font-semibold text-[#FAFAFA]">
-                    {item.title}
-                  </h3>
-                  <p className="text-xs text-[#A1A1AA] leading-relaxed">
-                    {item.description}
-                  </p>
-                </div>
+                </SpotlightCard>
               );
             })}
           </div>
         </section>
 
-        {/* Notas da Versão + Guia Rápido de Instalação */}
+        {/* Notas da Versão + Guia Rápido Interativo */}
         <section
           id="versao"
           className="max-w-6xl mx-auto px-5 py-16 border-t border-white/[0.06]"
         >
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Release Notes dinâmicas do R2 */}
-            <div className="lg:col-span-7 rounded-2xl bg-[#101014] hairline-box p-6 flex flex-col justify-between gap-5">
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-mono text-xs uppercase tracking-wider text-[#EF4444]">
-                    Última versão disponível
-                  </span>
-                  <div className="flex items-center gap-2 font-mono text-[11px] text-[#A1A1AA]">
-                    <span className="px-2 py-0.5 rounded-md bg-[#16161C] hairline-box text-[#FAFAFA]">
-                      v{release.version}
+            <SpotlightCard className="lg:col-span-7 p-6">
+              <div className="flex flex-col justify-between gap-5 h-full">
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-mono text-xs uppercase tracking-wider text-[#EF4444]">
+                      Última versão disponível
                     </span>
-                    {pubDateFormatted && <span>{pubDateFormatted}</span>}
+                    <div className="flex items-center gap-2 font-mono text-[11px] text-[#A1A1AA]">
+                      <span className="px-2 py-0.5 rounded-md bg-[#16161C] hairline-box text-[#FAFAFA]">
+                        v{release.version}
+                      </span>
+                      {pubDateFormatted && <span>{pubDateFormatted}</span>}
+                    </div>
                   </div>
+
+                  <h3 className="text-lg font-semibold text-[#FAFAFA]">
+                    Cafofo Desktop para Windows
+                  </h3>
+
+                  <p className="text-[#A1A1AA] leading-relaxed bg-[#09090B] hairline-box rounded-xl p-4 font-mono text-xs">
+                    {release.notes || FALLBACK_RELEASE.notes}
+                  </p>
                 </div>
 
-                <h3 className="text-lg font-semibold text-[#FAFAFA]">
-                  Cafofo Desktop para Windows
-                </h3>
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/[0.06]">
+                  <span className="font-mono text-[11px] text-[#71717A]">
+                    Cafofo_{release.version}_x64-setup.exe • {installerSize}
+                  </span>
+                  <motion.a
+                    href={downloadUrl}
+                    onClick={handleDownloadClick}
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl btn-crimson-vivid text-xs font-medium text-[#FAFAFA]"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Baixar v{release.version}</span>
+                  </motion.a>
+                </div>
+              </div>
+            </SpotlightCard>
 
-                <p className="text-sm text-[#A1A1AA] leading-relaxed bg-[#09090B] hairline-box rounded-xl p-4 font-mono text-xs">
-                  {release.notes || FALLBACK_RELEASE.notes}
+            {/* Passos interativos de instalação */}
+            <SpotlightCard delay={0.08} className="lg:col-span-5 p-6">
+              <div id="instalacao" className="space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#16161C] hairline-box flex items-center justify-center">
+                    <ShieldCheck className="w-4 h-4 text-[#EF4444]" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-[#FAFAFA]">
+                    Primeira instalação no Windows
+                  </h3>
+                </div>
+
+                <p className="text-xs text-[#A1A1AA] leading-relaxed">
+                  Como o Cafofo é um projeto independente e ainda não usa
+                  certificado EV pago da Microsoft, o Windows Defender SmartScreen
+                  pode exibir um aviso azul na primeira execução.
                 </p>
-              </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-white/[0.06]">
-                <span className="font-mono text-[11px] text-[#71717A]">
-                  Cafofo_{release.version}_x64-setup.exe • {installerSize}
-                </span>
-                <a
-                  href={downloadUrl}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl btn-crimson-vivid text-xs font-medium text-[#FAFAFA]"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Baixar v{release.version}</span>
-                </a>
-              </div>
-            </div>
-
-            {/* Nota transparente sobre SmartScreen */}
-            <div
-              id="instalacao"
-              className="lg:col-span-5 rounded-2xl bg-[#101014] hairline-box p-6 space-y-4"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#16161C] hairline-box flex items-center justify-center">
-                  <ShieldCheck className="w-4 h-4 text-[#EF4444]" />
+                <div className="space-y-2">
+                  {installSteps.map((stepText, idx) => {
+                    const active = activeInstallStep === idx;
+                    return (
+                      <motion.button
+                        key={idx}
+                        type="button"
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setActiveInstallStep(idx)}
+                        className={`w-full text-left p-2.5 rounded-xl font-mono text-xs flex items-start gap-2.5 transition-colors border ${
+                          active
+                            ? "bg-[#16161C] border-[#B91C1C]/55 text-[#FAFAFA]"
+                            : "bg-[#09090B]/70 border-white/[0.06] text-[#A1A1AA] hover:text-[#FAFAFA]"
+                        }`}
+                      >
+                        <span
+                          className={`shrink-0 ${
+                            active ? "text-[#EF4444] font-semibold" : "text-[#71717A]"
+                          }`}
+                        >
+                          0{idx + 1}.
+                        </span>
+                        <span>{stepText}</span>
+                      </motion.button>
+                    );
+                  })}
                 </div>
-                <h3 className="text-sm font-semibold text-[#FAFAFA]">
-                  Primeira instalação no Windows
-                </h3>
               </div>
-
-              <p className="text-xs text-[#A1A1AA] leading-relaxed">
-                Como o Cafofo é um projeto independente e ainda não usa certificado
-                EV pago da Microsoft, o Windows Defender SmartScreen pode exibir um
-                aviso azul na primeira execução.
-              </p>
-
-              <ol className="space-y-2 text-xs text-[#A1A1AA] font-mono">
-                <li className="flex gap-2">
-                  <span className="text-[#EF4444]">01.</span>
-                  <span>Execute o instalador Cafofo_{release.version}_x64-setup.exe</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-[#EF4444]">02.</span>
-                  <span>Clique em &quot;Mais informações&quot; e depois em &quot;Executar assim mesmo&quot;</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-[#EF4444]">03.</span>
-                  <span>As próximas atualizações acontecem direto dentro do app</span>
-                </li>
-              </ol>
-            </div>
+            </SpotlightCard>
           </div>
         </section>
       </main>
@@ -395,6 +543,7 @@ export function App() {
             </a>
             <a
               href={downloadUrl}
+              onClick={handleDownloadClick}
               className="hover:text-[#FAFAFA] transition-colors"
             >
               Download Windows
