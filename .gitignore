@@ -1,0 +1,34 @@
+# Dependencies & Build Artifacts
+node_modules/
+target/
+dist/
+*.tsbuildinfo
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+.env.production
+.env.production.local
+apps/desktop/.env
+apps/desktop/.env.local
+apps/desktop/.env.*.local
+apps/desktop/.env.production
+
+# Local Tooling & Design Refs
+.tools/
+.wrangler/
+desing-refs/
+
+# OS & Editors
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+# Tauri
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/schemas/
+
+# Supabase local
+supabase/.temp/

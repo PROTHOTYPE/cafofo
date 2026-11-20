@@ -1,0 +1,24 @@
+{
+  "name": "cafofo",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev:livekit": ".tools\\livekit\\livekit-server.exe --dev --bind 0.0.0.0",
+    "dev:server": "cargo run -p cafofo-server",
+    "dev:web": "pnpm --filter @cafofo/desktop dev",
+    "dev:desktop": "pnpm --filter @cafofo/desktop tauri dev",
+    "dev:all": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-all.ps1",
+    "deploy:cloud": "powershell -ExecutionPolicy Bypass -File scripts/deploy-cloud.ps1",
+    "setup:supabase": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-supabase.ps1",
+    "supabase": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/supabase.ps1",
+    "db:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/db-push.ps1 -StatusOnly",
+    "db:push": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/db-push.ps1",
+    "db:baseline": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/db-push.ps1 -BaselineInitial",
+    "build": "pnpm -r build",
+    "build:exe": "powershell -ExecutionPolicy Bypass -Command \"$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content -Raw $env:USERPROFILE\\.tauri\\cafofo.key; corepack pnpm --filter @cafofo/desktop tauri build\"",
+    "release": "powershell -ExecutionPolicy Bypass -File scripts/release.ps1",
+    "typecheck": "pnpm -r typecheck",
+    "protocol:export": "cargo test -p cafofo-protocol"
+  }
+}

@@ -1,0 +1,34 @@
+app = "cafofo-signaling"
+primary_region = "gru"
+
+[build]
+  dockerfile = "apps/server/Dockerfile"
+
+[env]
+  CAFOFO_HOST = "0.0.0.0"
+  CAFOFO_PORT = "3001"
+  CAFOFO_GRACE_PERIOD_MS = "15000"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 1000
+    soft_limit = 500
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
