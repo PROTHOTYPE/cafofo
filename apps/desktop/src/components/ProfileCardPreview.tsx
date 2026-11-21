@@ -188,7 +188,10 @@ export function ProfileCardPreview({
   useEffect(() => {
     if (!data.activeGameStartedAtMs) return;
     setNowMs(Date.now());
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    const id = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      setNowMs(Date.now());
+    }, 1000);
     return () => clearInterval(id);
   }, [data.activeGameStartedAtMs]);
 

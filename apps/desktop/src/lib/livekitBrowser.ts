@@ -92,6 +92,31 @@ let snapshot: BrowserMediaSnapshot = {
 };
 
 const listeners = new Set<() => void>();
+let currentMicRms = 0;
+const rmsListeners = new Set<() => void>();
+
+function setMicRms(nextRaw: number): void {
+  const quantized =
+    nextRaw < 0.01 ? 0 : Math.min(1, Math.round(nextRaw * 50) / 50);
+  if (quantized === currentMicRms) return;
+  currentMicRms = quantized;
+  for (const listener of rmsListeners) {
+    listener();
+  }
+}
+
+export function useBrowserMicRms(): number {
+  return useSyncExternalStore(
+    (cb) => {
+      rmsListeners.add(cb);
+      return () => {
+        rmsListeners.delete(cb);
+      };
+    },
+    () => currentMicRms,
+    () => 0,
+  );
+}
 
 function collectRemoteParticipantIds(): string[] {
   const ids = new Set<string>();
@@ -403,11 +428,15 @@ function startMicMeter(track: LocalAudioTrack): void {
     const samples = new Uint8Array(analyser.fftSize);
     micAnalyserCtx = ctx;
     let lastVoiceAt = 0;
+    let lastSpeaking = false;
 
     micAnalyserTimer = setInterval(() => {
       if (browserMuted || browserDeafened) {
-        if (snapshot.rmsLevel !== 0) updateSnapshot({ rmsLevel: 0 });
-        useVoiceStore.getState().setLocalSpeaking(false);
+        setMicRms(0);
+        if (lastSpeaking) {
+          lastSpeaking = false;
+          useVoiceStore.getState().setLocalSpeaking(false);
+        }
         return;
       }
       analyser.getByteTimeDomainData(samples);
@@ -417,15 +446,24 @@ function startMicMeter(track: LocalAudioTrack): void {
         sum += centered * centered;
       }
       const rms = Math.min(1, Math.sqrt(sum / samples.length));
-      updateSnapshot({ rmsLevel: rms });
+      // Evita repaints de CPU quando a janela está minimizada ou na bandeja
+      if (typeof document === "undefined" || !document.hidden) {
+        setMicRms(rms);
+      } else if (currentMicRms !== 0) {
+        setMicRms(0);
+      }
       const now = Date.now();
       if (rms > 0.03) {
         lastVoiceAt = now;
-        useVoiceStore.getState().setLocalSpeaking(true);
-      } else if (now - lastVoiceAt > 350) {
+        if (!lastSpeaking) {
+          lastSpeaking = true;
+          useVoiceStore.getState().setLocalSpeaking(true);
+        }
+      } else if (lastSpeaking && now - lastVoiceAt > 350) {
+        lastSpeaking = false;
         useVoiceStore.getState().setLocalSpeaking(false);
       }
-    }, 180);
+    }, 220);
   } catch {
     // WebAudio metering is optional
   }
@@ -1084,8 +1122,28 @@ export function createBrowserLiveKitTransport(): VoiceTransportAdapter {
 
       room.on(RoomEvent.Disconnected, () => {
         if (activeRoom === room) {
+          const expectedChannelId = useVoiceStore.getState().activeVoiceChannelId;
           activeRoomName = null;
+          setMicRms(0);
           updateSnapshot({ connected: false, localScreenVideoTrack: null });
+          // Se desconectou inesperadamente enquanto ainda estamos em call, solicita
+          // automaticamente novo token LiveKit ao servidor de sinalização para restaurar o áudio.
+          if (expectedChannelId) {
+            setTimeout(() => {
+              const vs = useVoiceStore.getState();
+              if (
+                vs.activeVoiceChannelId === expectedChannelId &&
+                activeRoom === room &&
+                vs.signalingClient
+              ) {
+                if (vs.signalingClient.isOpen()) {
+                  vs.signalingClient.requestLiveKitToken(expectedChannelId);
+                } else {
+                  vs.signalingClient.connect();
+                }
+              }
+            }, 1500);
+          }
         }
       });
 

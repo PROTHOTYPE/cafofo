@@ -592,6 +592,23 @@ export function App() {
       totalUnreadCount > 0 ? `(${totalUnreadCount}) Cafofo` : "Cafofo";
   }, [totalUnreadCount]);
 
+  // Pausa animações CSS e repaints quando a janela está minimizada/na bandeja
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const syncVisibility = () => {
+      document.documentElement.classList.toggle(
+        "cafofo-window-hidden",
+        document.hidden,
+      );
+    };
+    syncVisibility();
+    document.addEventListener("visibilitychange", syncVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", syncVisibility);
+      document.documentElement.classList.remove("cafofo-window-hidden");
+    };
+  }, []);
+
   useEffect(() => {
     const handleResetLayout = () => {
       setLeftDrawerOpen(false);

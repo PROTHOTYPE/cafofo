@@ -43,6 +43,7 @@ export interface SignalingEventMap {
 export interface SignalingClientOptions {
   url?: string;
   accessToken?: string;
+  getAccessToken?: () => string | null;
   autoReconnect?: boolean;
   reconnectBaseDelayMs?: number;
   reconnectMaxDelayMs?: number;
@@ -88,6 +89,7 @@ export class SignalingClient {
   private readonly heartbeatIntervalMs: number;
 
   private accessToken: string | null;
+  private readonly getAccessToken?: () => string | null;
   private socket: WebSocket | null = null;
   private status: ConnectionStatus = "disconnected";
   private manualDisconnect = false;
@@ -106,6 +108,7 @@ export class SignalingClient {
   constructor(options: SignalingClientOptions = {}) {
     this.url = resolveSignalingUrl(options.url);
     this.accessToken = options.accessToken ?? null;
+    this.getAccessToken = options.getAccessToken;
     this.autoReconnect = options.autoReconnect ?? true;
     this.reconnectBaseDelayMs = options.reconnectBaseDelayMs ?? 1_000;
     this.reconnectMaxDelayMs = options.reconnectMaxDelayMs ?? 10_000;
@@ -158,6 +161,11 @@ export class SignalingClient {
     this.clearReconnectTimer();
     this.setStatus(this.reconnectAttempt > 0 ? "reconnecting" : "connecting");
 
+    const freshToken = this.getAccessToken?.();
+    if (freshToken) {
+      this.accessToken = freshToken;
+    }
+
     const wsUrl = this.buildConnectionUrl();
     const ws = new WebSocket(wsUrl);
     this.socket = ws;
@@ -168,12 +176,16 @@ export class SignalingClient {
       this.startHeartbeat();
 
       if (this.activeJoin) {
+        const latestToken = this.getAccessToken?.() ?? this.accessToken;
+        if (latestToken) {
+          this.accessToken = latestToken;
+        }
         this.send({
           type: "JoinRoom",
           payload: {
             ...this.activeJoin,
             reconnect_token: this.reconnectToken,
-            access_token: this.accessToken,
+            access_token: latestToken,
           },
         });
       }

@@ -45,6 +45,7 @@ import {
   listBrowserAudioInputs,
   retryBrowserMicPublish,
   unlockBrowserAudioPlayback,
+  useBrowserMicRms,
   useBrowserRemoteMedia,
 } from "../lib/livekitBrowser";
 import {
@@ -157,6 +158,7 @@ export function VoiceControlsPanel({
   const setScreenVolume = useVoiceStore((s) => s.setScreenVolume);
 
   const browserMedia = useBrowserRemoteMedia();
+  const browserMicRms = useBrowserMicRms();
   // Voz/mídia unificada no motor LiveKit WebRTC (WebView2 no Desktop + Browser na Web)
   const isTauri = false;
   const browserScreenShareSupported = canBrowserScreenShare();
@@ -426,7 +428,7 @@ export function VoiceControlsPanel({
           ),
         )
       : !isTauri && activeVoiceChannelName
-        ? Math.min(1, Math.max(0.1, browserMedia.rmsLevel * 3.2))
+        ? Math.min(1, Math.max(0.1, browserMicRms * 3.2))
         : activeVoiceChannelName
           ? 0.22
           : 0.06;

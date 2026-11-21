@@ -404,6 +404,22 @@
   animation: card-neon-grid-drift 9s linear infinite;
 }
 
+.card-theme-obsidian-glass,
+.card-theme-liquid-water,
+.card-theme-crimson-fire,
+.card-theme-cyber-hologram,
+.card-theme-neon-grid {
+  contain: paint;
+}
+
+/* Economiza CPU/GPU no WebView2 quando o Cafofo está minimizado ou na bandeja */
+html.cafofo-window-hidden *,
+html.cafofo-window-hidden *::before,
+html.cafofo-window-hidden *::after {
+  animation-play-state: paused !important;
+  transition: none !important;
+}
+
 @keyframes cafofo-boot {
   0% {
     opacity: 0;

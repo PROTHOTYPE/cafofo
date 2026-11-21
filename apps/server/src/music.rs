@@ -12,7 +12,7 @@ use axum::Json;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::process::Command;
-use tokio::sync::{watch, Mutex, RwLock};
+use tokio::sync::{watch, Mutex, RwLock, Semaphore};
 use tokio_util::io::ReaderStream;
 use uuid::Uuid;
 
@@ -136,10 +136,26 @@ struct CachedAudioFile {
 
 type InFlightDownloadRx = watch::Receiver<Option<Result<CachedAudioFile, String>>>;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct MusicHub {
     rooms: Arc<RwLock<HashMap<String, MusicRoomState>>>,
     in_flight_downloads: Arc<Mutex<HashMap<String, InFlightDownloadRx>>>,
+    download_semaphore: Arc<Semaphore>,
+}
+
+impl Default for MusicHub {
+    fn default() -> Self {
+        Self {
+            rooms: Arc::new(RwLock::new(HashMap::new())),
+            in_flight_downloads: Arc::new(Mutex::new(HashMap::new())),
+            download_semaphore: Arc::new(Semaphore::new(2)),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PrepareQuery {
+    pub wait: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -612,30 +628,35 @@ async fn ensure_cached_audio_file(
         return Ok(existing);
     }
 
-    // Single-flight dedupe: se vários ouvintes na call pedirem a mesma faixa juntos,
-    // executa apenas 1 processo yt-dlp e compartilha o arquivo pronto com todos.
-    let maybe_waiter = {
+    // Single-flight dedupe + tarefa desacoplada (tokio::spawn):
+    // Mesmo que o request HTTP que disparou o download seja cancelado pelo cliente,
+    // a tarefa conclui o download e limpa `in_flight_downloads` sem corromper o map.
+    let mut rx = {
         let mut guard = hub.in_flight_downloads.lock().await;
-        if let Some(rx) = guard.get(video_id) {
-            Some(rx.clone())
+        if let Some(existing_rx) = guard.get(video_id) {
+            existing_rx.clone()
         } else {
             let (tx, rx) = watch::channel(None);
-            guard.insert(video_id.to_string(), rx);
-            drop(guard);
-
-            let result = download_audio_to_cache(video_id).await;
-            let _ = tx.send(Some(result.clone()));
-            let mut cleanup = hub.in_flight_downloads.lock().await;
-            cleanup.remove(video_id);
-            return result;
+            guard.insert(video_id.to_string(), rx.clone());
+            let hub_clone = hub.clone();
+            let vid = video_id.to_string();
+            tokio::spawn(async move {
+                let _permit = hub_clone.download_semaphore.acquire().await;
+                let result = match find_cached_audio_file(&vid).await {
+                    Some(existing) => Ok(existing),
+                    None => download_audio_to_cache(&vid).await,
+                };
+                let _ = tx.send(Some(result));
+                let mut cleanup = hub_clone.in_flight_downloads.lock().await;
+                cleanup.remove(&vid);
+            });
+            rx
         }
     };
 
-    if let Some(mut rx) = maybe_waiter {
-        if rx.wait_for(|v| v.is_some()).await.is_ok() {
-            if let Some(res) = rx.borrow().clone() {
-                return res;
-            }
+    if rx.wait_for(|v| v.is_some()).await.is_ok() {
+        if let Some(res) = rx.borrow().clone() {
+            return res;
         }
     }
 
@@ -688,6 +709,7 @@ fn parse_byte_range(range_header: &str, total_len: u64) -> Option<(u64, u64)> {
 pub async fn prepare_music_handler(
     headers: HeaderMap,
     Path(video_id): Path<String>,
+    Query(query): Query<PrepareQuery>,
     State(state): State<AppState>,
 ) -> Result<StatusCode, (StatusCode, Json<ErrorBody>)> {
     let _user_id = authenticate_request(&headers, &state).await?;
@@ -698,6 +720,21 @@ pub async fn prepare_music_handler(
                 error: "video_id inválido.".to_string(),
             }),
         ));
+    }
+
+    let should_wait = matches!(
+        query.wait.as_deref().map(str::trim),
+        Some("1" | "true" | "TRUE")
+    );
+
+    if should_wait {
+        ensure_cached_audio_file(&state.music, &video_id)
+            .await
+            .map_err(|err| {
+                tracing::warn!(%video_id, %err, "synchronous music prepare failed");
+                (StatusCode::BAD_GATEWAY, Json(ErrorBody { error: err }))
+            })?;
+        return Ok(StatusCode::OK);
     }
 
     let hub = state.music.clone();

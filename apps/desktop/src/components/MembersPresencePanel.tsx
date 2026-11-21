@@ -158,10 +158,21 @@ export function MembersPresencePanel({
   const [kickCandidate, setKickCandidate] =
     useState<ServerMemberWithProfile | null>(null);
 
+  const hasAnyActiveGame =
+    Boolean(currentGame?.started_at_ms) ||
+    Object.values(gameByUser).some((g) => Boolean(g?.started_at_ms)) ||
+    Object.values(onlineMap).some((p) =>
+      Boolean(p?.game_presence?.started_at_ms),
+    );
+
   useEffect(() => {
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    if (!hasAnyActiveGame) return;
+    const id = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      setNowMs(Date.now());
+    }, 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [hasAnyActiveGame]);
 
   useEffect(() => {
     if (!isTauriRuntime()) return;

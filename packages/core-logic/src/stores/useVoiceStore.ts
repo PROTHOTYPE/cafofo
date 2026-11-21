@@ -442,6 +442,8 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
         const client = new SignalingClient({
           url: get().signalingUrl,
           accessToken,
+          getAccessToken: () =>
+            useAuthStore.getState().session?.access_token ?? accessToken,
           autoReconnect: true,
         });
 
@@ -481,11 +483,14 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
             error: status === "connected" || status === "reconnecting" ? null : prev.error,
           }));
           if (status === "connected") {
+            const latestToken =
+              useAuthStore.getState().session?.access_token ?? accessToken;
+            client.setAccessToken(latestToken);
             client.joinRoom({
               room_id: channelId,
               user_id: userId,
               display_name: displayName,
-              access_token: accessToken,
+              access_token: latestToken,
             });
           }
         });

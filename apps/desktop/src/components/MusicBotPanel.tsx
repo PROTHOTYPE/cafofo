@@ -77,8 +77,9 @@ export function MusicBotPanel() {
     }
     setFallbackElapsedSec(getEstimatedPositionSec());
     const id = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
       setFallbackElapsedSec(getEstimatedPositionSec());
-    }, 500);
+    }, 1000);
     return () => clearInterval(id);
   }, [current, isPlaying, getEstimatedPositionSec]);
 

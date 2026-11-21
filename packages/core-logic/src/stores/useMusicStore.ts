@@ -142,18 +142,22 @@ async function musicApiFetch<T>(
   return (await resp.json()) as T;
 }
 
-async function prepareVideoAudio(videoId: string): Promise<void> {
+async function prepareVideoAudio(videoId: string, wait = true): Promise<void> {
   const token = useAuthStore.getState().session?.access_token;
   if (!token || !videoId) return;
   const base = resolveMusicApiBaseUrl();
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25_000);
+  const timer = setTimeout(() => controller.abort(), 30_000);
+  const query = wait ? "?wait=1" : "";
   try {
-    await fetch(`${base}/api/music/prepare/${encodeURIComponent(videoId)}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal,
-    });
+    await fetch(
+      `${base}/api/music/prepare/${encodeURIComponent(videoId)}${query}`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      },
+    );
   } catch {
     // Mesmo se falhar/timeout, deixa o <audio> tentar o stream direto
   } finally {
@@ -162,7 +166,7 @@ async function prepareVideoAudio(videoId: string): Promise<void> {
 }
 
 function prewarmVideoAudio(videoId: string): void {
-  void prepareVideoAudio(videoId);
+  void prepareVideoAudio(videoId, false);
 }
 
 function broadcastMusicSnapshot(snapshot: MusicRoomSnapshot): void {
