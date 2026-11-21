@@ -610,6 +610,29 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined" || typeof document === "undefined") return;
+    const setUnfocused = () =>
+      document.documentElement.classList.add("cafofo-window-unfocused");
+    const setFocused = () => {
+      if (!document.hidden) {
+        document.documentElement.classList.remove("cafofo-window-unfocused");
+      }
+    };
+    const onVisibility = () => {
+      if (document.hidden) setUnfocused();
+      else setFocused();
+    };
+    window.addEventListener("blur", setUnfocused);
+    window.addEventListener("focus", setFocused);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("blur", setUnfocused);
+      window.removeEventListener("focus", setFocused);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
+  useEffect(() => {
     const handleResetLayout = () => {
       setLeftDrawerOpen(false);
       setRightDrawerOpen(false);

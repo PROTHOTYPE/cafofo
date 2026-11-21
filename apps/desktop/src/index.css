@@ -253,9 +253,8 @@
       );
     background-origin: border-box;
     background-clip: padding-box, border-box;
-    background-size: 100% 100%, 240% 240%;
+    background-size: 100% 100%, 100% 100%;
     border: 1px solid transparent;
-    animation: crimson-border-sweep 5s ease infinite;
   }
 
   .crimson-header-animated-border {
@@ -277,8 +276,6 @@
       rgba(185, 28, 28, 0.78) 65%,
       rgba(255, 255, 255, 0.06) 100%
     );
-    background-size: 220% 100%;
-    animation: crimson-border-sweep 6s linear infinite;
     pointer-events: none;
   }
 
@@ -410,6 +407,21 @@
 .card-theme-cyber-hologram,
 .card-theme-neon-grid {
   contain: paint;
+  animation-play-state: paused;
+}
+
+*:hover > .card-theme-obsidian-glass,
+*:hover > .card-theme-liquid-water,
+*:hover > .card-theme-crimson-fire,
+*:hover > .card-theme-cyber-hologram,
+*:hover > .card-theme-neon-grid {
+  animation-play-state: running;
+}
+
+html.cafofo-window-unfocused *,
+html.cafofo-window-unfocused *::before,
+html.cafofo-window-unfocused *::after {
+  animation-play-state: paused !important;
 }
 
 /* Economiza CPU/GPU no WebView2 quando o Cafofo está minimizado ou na bandeja */
