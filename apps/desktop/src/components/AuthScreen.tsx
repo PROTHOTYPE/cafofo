@@ -109,17 +109,19 @@ export function AuthScreen() {
         {/* Marca Superior */}
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img
-              src="/logo-icon.png"
-              alt="Cafofo"
-              className="w-10 h-10 rounded-xl object-cover shadow-crimson-glow border border-[#EF4444]/40 animate-radar-pulse-crimson"
-            />
+            <div className="w-10 h-10 rounded-xl bg-[#101014] border border-[#EF4444]/40 shadow-crimson-glow p-1 flex items-center justify-center overflow-hidden shrink-0">
+              <img
+                src="/logo-icon.png"
+                alt="Cafofo"
+                className="w-full h-full object-contain"
+              />
+            </div>
             <div>
               <span className="text-sm font-semibold tracking-tight block">
                 CAFOFO
               </span>
               <span className="text-[11px] font-mono text-[#A1A1AA] block">
-                HIGH-CRAFT VOICE & STREAMING
+                VOZ, CHAT &amp; STREAMING
               </span>
             </div>
           </div>
@@ -217,9 +219,9 @@ export function AuthScreen() {
         </div>
 
         {/* Rodapé */}
-        <div className="relative z-10 flex items-center justify-between text-xs text-[#A1A1AA] font-mono">
-          <span>OBSIDIAN MATTE #09090B</span>
-          <span>DEEP CRIMSON #B91C1C</span>
+        <div className="relative z-10 flex items-center justify-between text-xs text-[#71717A] font-mono">
+          <span>CAFOFO · WEB &amp; DESKTOP</span>
+          <span>LIVEKIT WEBRTC · GRU</span>
         </div>
       </div>
 
