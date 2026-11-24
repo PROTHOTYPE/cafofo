@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
-use sysinfo::{ProcessesToUpdate, System};
+use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 use thiserror::Error;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -111,9 +111,13 @@ impl GameDetector {
         self.current_session.as_ref()
     }
 
-    /// Snapshots currently running OS processes.
+    /// Snapshots currently running OS processes (lightweight: name + exe path only).
     pub fn list_processes(&mut self) -> Vec<DetectedProcess> {
-        self.system.refresh_processes(ProcessesToUpdate::All, true);
+        self.system.refresh_processes_specifics(
+            ProcessesToUpdate::All,
+            true,
+            ProcessRefreshKind::nothing().with_exe(UpdateKind::OnlyIfNotSet),
+        );
         self.system
             .processes()
             .iter()
