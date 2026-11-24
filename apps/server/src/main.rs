@@ -7,7 +7,7 @@ use std::net::SocketAddr;
 use std::time::Duration;
 
 use axum::extract::State;
-use axum::http::{header, StatusCode};
+use axum::http::{header, Method, StatusCode};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::Serialize;
@@ -16,11 +16,7 @@ use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
 
 use crate::auth::{LiveKitConfig, SupabaseAuth};
-use crate::music::{
-    clear_music_handler, enqueue_music_handler, get_room_music_handler, prepare_music_handler,
-    remove_music_handler, search_music_handler, skip_music_handler, stream_music_handler,
-    toggle_music_handler,
-};
+use crate::music::{prepare_music_handler, search_music_handler, stream_music_handler};
 use crate::state::AppState;
 use crate::ws::ws_handler;
 
@@ -31,7 +27,7 @@ struct HealthResponse {
     active_rooms: usize,
     grace_period_ms: u64,
     supabase_auth_configured: bool,
-    livekit_url: String,
+    livekit_configured: bool,
 }
 
 async fn health_handler(State(state): State<AppState>) -> (StatusCode, Json<HealthResponse>) {
@@ -45,7 +41,8 @@ async fn health_handler(State(state): State<AppState>) -> (StatusCode, Json<Heal
             active_rooms,
             grace_period_ms,
             supabase_auth_configured: state.auth.is_configured(),
-            livekit_url: state.livekit.url.clone(),
+            livekit_configured: !state.livekit.api_key.is_empty()
+                && !state.livekit.api_secret.is_empty(),
         }),
     )
 }
@@ -121,13 +118,11 @@ async fn main() {
         api_key: std::env::var("LIVEKIT_API_KEY")
             .ok()
             .map(|v| v.trim().to_string())
-            .filter(|v| !v.is_empty())
-            .unwrap_or_else(|| "devkey".to_string()),
+            .unwrap_or_default(),
         api_secret: std::env::var("LIVEKIT_API_SECRET")
             .ok()
             .map(|v| v.trim().to_string())
-            .filter(|v| !v.is_empty())
-            .unwrap_or_else(|| "secret".to_string()),
+            .unwrap_or_default(),
     };
 
     let app_state = AppState::new(Duration::from_millis(grace_period_ms), auth, livekit);
@@ -138,17 +133,15 @@ async fn main() {
         .route("/api/music/search", get(search_music_handler))
         .route("/api/music/prepare/:video_id", post(prepare_music_handler))
         .route("/api/music/stream/:video_id", get(stream_music_handler))
-        .route("/api/music/rooms/:room_id", get(get_room_music_handler))
-        .route("/api/music/rooms/:room_id/enqueue", post(enqueue_music_handler))
-        .route("/api/music/rooms/:room_id/toggle", post(toggle_music_handler))
-        .route("/api/music/rooms/:room_id/skip", post(skip_music_handler))
-        .route("/api/music/rooms/:room_id/remove", post(remove_music_handler))
-        .route("/api/music/rooms/:room_id/clear", post(clear_music_handler))
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)
-                .allow_methods(Any)
-                .allow_headers(Any)
+                .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+                .allow_headers([
+                    header::AUTHORIZATION,
+                    header::CONTENT_TYPE,
+                    header::RANGE,
+                ])
                 .expose_headers([
                     header::CONTENT_LENGTH,
                     header::CONTENT_RANGE,

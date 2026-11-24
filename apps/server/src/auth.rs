@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -7,6 +8,7 @@ use serde::Deserialize;
 use tokio::sync::RwLock;
 
 const JWKS_CACHE_TTL: Duration = Duration::from_secs(900);
+const ROOM_ACCESS_CACHE_TTL: Duration = Duration::from_secs(60);
 
 #[derive(Debug, Clone)]
 pub struct AuthenticatedUser {
@@ -27,6 +29,7 @@ pub struct SupabaseAuth {
     secret_key: String,
     http: reqwest::Client,
     jwks_cache: Arc<RwLock<Option<CachedJwks>>>,
+    room_access_cache: Arc<RwLock<HashMap<(String, String), Instant>>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,6 +39,14 @@ struct ServerMemberRoleRow {
 
 #[derive(Debug, Deserialize)]
 struct VoiceChannelRow {
+    #[allow(dead_code)]
+    id: String,
+    #[serde(default)]
+    server_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct DirectChannelIdRow {
     #[allow(dead_code)]
     id: String,
 }
@@ -91,11 +102,160 @@ impl SupabaseAuth {
                 .build()
                 .expect("failed to build reqwest client"),
             jwks_cache: Arc::new(RwLock::new(None)),
+            room_access_cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
     pub fn is_configured(&self) -> bool {
         !self.supabase_url.is_empty()
+    }
+
+    /// Verifies that `user_id` is authorized to join `room_id` (either a server voice
+    /// channel where the user is a member, or a `dm:<uuid>` direct call where the user
+    /// is one of the two participants).
+    pub async fn verify_voice_room_access(
+        &self,
+        room_id: &str,
+        user_id: &str,
+        actor_bearer_token: Option<&str>,
+    ) -> Result<(), String> {
+        if self.supabase_url.is_empty() {
+            return Ok(());
+        }
+
+        if !is_safe_id(user_id) {
+            return Err("invalid authenticated user identifier".to_string());
+        }
+
+        let cache_key = (user_id.to_string(), room_id.to_string());
+        {
+            let guard = self.room_access_cache.read().await;
+            if let Some(verified_at) = guard.get(&cache_key) {
+                if verified_at.elapsed() < ROOM_ACCESS_CACHE_TTL {
+                    return Ok(());
+                }
+            }
+        }
+
+        let (apikey, bearer) = if !self.secret_key.is_empty() {
+            (self.secret_key.as_str(), self.secret_key.as_str())
+        } else if let Some(tok) = actor_bearer_token.filter(|s| !s.trim().is_empty()) {
+            (self.publishable_key.as_str(), tok)
+        } else {
+            return Err("missing Supabase credentials for room permission check".to_string());
+        };
+
+        if apikey.is_empty() {
+            return Err("missing Supabase API key for room permission check".to_string());
+        }
+
+        if let Some(dm_id) = room_id.strip_prefix("dm:") {
+            if !is_safe_id(dm_id) {
+                return Err("invalid direct call room identifier".to_string());
+            }
+
+            let dm_url = format!(
+                "{}/rest/v1/direct_channels?id=eq.{dm_id}&or=(user_a.eq.{user_id},user_b.eq.{user_id})&select=id",
+                self.supabase_url
+            );
+            let dm_res = self
+                .http
+                .get(&dm_url)
+                .header("apikey", apikey)
+                .bearer_auth(bearer)
+                .send()
+                .await
+                .map_err(|e| format!("failed to verify direct call access: {e}"))?;
+
+            if !dm_res.status().is_success() {
+                return Err(format!(
+                    "Supabase direct channel check returned HTTP {}",
+                    dm_res.status()
+                ));
+            }
+
+            let rows: Vec<DirectChannelIdRow> = dm_res
+                .json()
+                .await
+                .map_err(|e| format!("invalid direct_channels payload: {e}"))?;
+
+            if rows.is_empty() {
+                return Err("you are not a participant of this direct call".to_string());
+            }
+        } else {
+            if !is_safe_id(room_id) {
+                return Err("invalid voice channel identifier".to_string());
+            }
+
+            let channel_url = format!(
+                "{}/rest/v1/channels?id=eq.{room_id}&type=eq.voice&select=id,server_id",
+                self.supabase_url
+            );
+            let channel_res = self
+                .http
+                .get(&channel_url)
+                .header("apikey", apikey)
+                .bearer_auth(bearer)
+                .send()
+                .await
+                .map_err(|e| format!("failed to verify voice channel: {e}"))?;
+
+            if !channel_res.status().is_success() {
+                return Err(format!(
+                    "Supabase channel check returned HTTP {}",
+                    channel_res.status()
+                ));
+            }
+
+            let channel_rows: Vec<VoiceChannelRow> = channel_res
+                .json()
+                .await
+                .map_err(|e| format!("invalid channels payload: {e}"))?;
+
+            let Some(ch) = channel_rows.first() else {
+                return Err("voice channel not found or access denied".to_string());
+            };
+
+            if !is_safe_id(&ch.server_id) {
+                return Err("voice channel has invalid server_id".to_string());
+            }
+
+            let member_url = format!(
+                "{}/rest/v1/server_members?server_id=eq.{}&user_id=eq.{user_id}&select=role",
+                self.supabase_url, ch.server_id
+            );
+            let member_res = self
+                .http
+                .get(&member_url)
+                .header("apikey", apikey)
+                .bearer_auth(bearer)
+                .send()
+                .await
+                .map_err(|e| format!("failed to verify server membership: {e}"))?;
+
+            if !member_res.status().is_success() {
+                return Err(format!(
+                    "Supabase membership check returned HTTP {}",
+                    member_res.status()
+                ));
+            }
+
+            let member_rows: Vec<ServerMemberRoleRow> = member_res
+                .json()
+                .await
+                .map_err(|e| format!("invalid server_members payload: {e}"))?;
+
+            if member_rows.is_empty() {
+                return Err("you are not a member of this server".to_string());
+            }
+        }
+
+        let mut guard = self.room_access_cache.write().await;
+        if guard.len() > 1024 {
+            guard.retain(|_, ts| ts.elapsed() < ROOM_ACCESS_CACHE_TTL);
+        }
+        guard.insert(cache_key, Instant::now());
+        Ok(())
     }
 
     /// Verifies that `actor_user_id` is an `owner` or `admin` of `server_id` and that

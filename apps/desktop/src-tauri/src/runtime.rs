@@ -325,9 +325,25 @@ impl CafofoRuntime {
             return Ok(());
         }
 
+        // Proteção anti-SSRF: só permite URLs HTTPS públicas (bloqueando localhost, IPs privados e esquemas locais)
+        let parsed = reqwest::Url::parse(trimmed)
+            .map_err(|_| "invalid entry sound URL".to_string())?;
+        if parsed.scheme() != "https" {
+            return Err("entry sound URL must use https".to_string());
+        }
+        let host = parsed.host_str().unwrap_or("").to_ascii_lowercase();
+        if host.is_empty()
+            || host == "localhost"
+            || host.ends_with(".localhost")
+            || host.ends_with(".local")
+            || host.parse::<std::net::IpAddr>().is_ok()
+        {
+            return Err("entry sound host is not allowed".to_string());
+        }
+
         let response = self
             .http_client
-            .get(trimmed)
+            .get(parsed)
             .send()
             .await
             .map_err(|e| format!("failed to download entry sound: {e}"))?;

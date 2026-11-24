@@ -432,6 +432,23 @@ async fn dispatch_client_message(
                 MAX_DISPLAY_NAME_LEN,
                 false,
             )?;
+
+            if let Err(err) = state
+                .auth
+                .verify_voice_room_access(
+                    &payload.room_id,
+                    &authed.user_id,
+                    bearer_token.as_deref(),
+                )
+                .await
+            {
+                return Err(ProtocolError {
+                    code: ErrorCode::Unauthorized,
+                    message: err,
+                    recoverable: false,
+                });
+            }
+
             payload.user_id = authed.user_id.clone();
 
             let session = join_room(state, payload, connection_id, tx.clone()).await?;

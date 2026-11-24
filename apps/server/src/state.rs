@@ -870,19 +870,19 @@ mod tests {
         );
         assert_eq!(
             resolve_client_livekit_url(
-                "wss://cafofo-4iwrudhu.livekit.cloud",
+                "wss://example-project.livekit.cloud",
                 Some("192.168.1.50"),
                 Some("192.168.1.50"),
             ),
-            "wss://cafofo-4iwrudhu.livekit.cloud"
+            "wss://example-project.livekit.cloud"
         );
         assert_eq!(
             resolve_client_livekit_url(
-                "wss://cafofo-4iwrudhu.livekit.cloud",
+                "wss://example-project.livekit.cloud",
                 Some("localhost"),
                 Some("tauri.localhost"),
             ),
-            "wss://cafofo-4iwrudhu.livekit.cloud"
+            "wss://example-project.livekit.cloud"
         );
     }
 

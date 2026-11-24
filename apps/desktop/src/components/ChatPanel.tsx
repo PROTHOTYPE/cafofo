@@ -913,12 +913,14 @@ export function ChatPanel({
                               );
                             }
 
+                            const safeAttUrl =
+                              /^https?:\/\//i.test(att.url ?? "") ? att.url : "#";
                             return (
                               <a
                                 key={att.path || att.url}
-                                href={att.url}
+                                href={safeAttUrl}
                                 target="_blank"
-                                rel="noreferrer"
+                                rel="noopener noreferrer"
                                 className="px-3 py-1.5 rounded-lg bg-[#16161C] hover:bg-[#1E1E26] hairline-box text-xs text-[#FAFAFA] flex items-center gap-2 transition-colors"
                               >
                                 <FileText
@@ -1181,11 +1183,11 @@ export function ChatPanel({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            {expandedImage?.url && (
+            {expandedImage?.url && /^https?:\/\//i.test(expandedImage.url) && (
               <a
                 href={expandedImage.url}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="px-2.5 py-1.5 rounded-lg bg-[#101014]/85 hover:bg-[#16161C] hairline-box text-xs text-[#FAFAFA] flex items-center gap-1.5"
               >
                 <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />

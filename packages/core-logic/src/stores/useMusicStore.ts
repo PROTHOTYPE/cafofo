@@ -791,7 +791,9 @@ export const useMusicStore = create<MusicState>((set, get) => ({
 
   getStreamUrl: (videoId) => {
     const base = resolveMusicApiBaseUrl();
-    return `${base}/api/music/stream/${encodeURIComponent(videoId)}`;
+    const token = useAuthStore.getState().session?.access_token;
+    const query = token ? `?token=${encodeURIComponent(token)}` : "";
+    return `${base}/api/music/stream/${encodeURIComponent(videoId)}${query}`;
   },
 
   getEstimatedPositionSec: () => {

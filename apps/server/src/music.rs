@@ -12,13 +12,12 @@ use axum::Json;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::process::Command;
-use tokio::sync::{watch, Mutex, RwLock, Semaphore};
+use tokio::sync::{watch, Mutex, Semaphore};
 use tokio_util::io::ReaderStream;
 use uuid::Uuid;
 
 use crate::state::AppState;
 
-const MAX_QUEUE_LEN: usize = 50;
 const MUSIC_CACHE_DIR: &str = "/tmp/cafofo-music";
 const YTDLP_CACHE_DIR: &str = "/tmp/yt-dlp-cache";
 const MAX_CACHED_AUDIO_FILES: usize = 20;
@@ -33,101 +32,6 @@ pub struct MusicSearchResult {
     pub url: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MusicTrack {
-    pub track_uid: String,
-    pub video_id: String,
-    pub title: String,
-    pub author: String,
-    pub duration_sec: u64,
-    pub thumbnail_url: String,
-    pub url: String,
-    pub requested_by_id: String,
-    pub requested_by_name: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct MusicRoomSnapshot {
-    pub room_id: String,
-    pub current: Option<MusicTrack>,
-    pub queue: Vec<MusicTrack>,
-    pub is_playing: bool,
-    pub started_at_ms: u64,
-    pub paused_offset_sec: f64,
-    pub server_now_ms: u64,
-    pub version: u64,
-}
-
-#[derive(Debug, Clone)]
-struct MusicRoomState {
-    current: Option<MusicTrack>,
-    queue: Vec<MusicTrack>,
-    is_playing: bool,
-    started_at_ms: u64,
-    paused_offset_sec: f64,
-    version: u64,
-}
-
-impl Default for MusicRoomState {
-    fn default() -> Self {
-        Self {
-            current: None,
-            queue: Vec::new(),
-            is_playing: false,
-            started_at_ms: 0,
-            paused_offset_sec: 0.0,
-            version: 1,
-        }
-    }
-}
-
-impl MusicRoomState {
-    fn advance_if_finished(&mut self, now_ms: u64) {
-        while self.is_playing {
-            let Some(cur) = self.current.as_ref() else {
-                self.is_playing = false;
-                break;
-            };
-            if cur.duration_sec == 0 {
-                break;
-            }
-            let elapsed_sec = now_ms.saturating_sub(self.started_at_ms) as f64 / 1000.0;
-            if elapsed_sec < (cur.duration_sec as f64) + 2.0 {
-                break;
-            }
-            // Track finished naturally; move to next in queue
-            if let Some(next) = self.queue.first().cloned() {
-                let overflow_ms = ((elapsed_sec - cur.duration_sec as f64).max(0.0) * 1000.0) as u64;
-                self.queue.remove(0);
-                self.current = Some(next);
-                self.started_at_ms = now_ms.saturating_sub(overflow_ms.min(2000));
-                self.paused_offset_sec = 0.0;
-                self.version += 1;
-            } else {
-                self.current = None;
-                self.is_playing = false;
-                self.started_at_ms = 0;
-                self.paused_offset_sec = 0.0;
-                self.version += 1;
-                break;
-            }
-        }
-    }
-
-    fn to_snapshot(&self, room_id: &str, now_ms: u64) -> MusicRoomSnapshot {
-        MusicRoomSnapshot {
-            room_id: room_id.to_string(),
-            current: self.current.clone(),
-            queue: self.queue.clone(),
-            is_playing: self.is_playing,
-            started_at_ms: self.started_at_ms,
-            paused_offset_sec: self.paused_offset_sec,
-            server_now_ms: now_ms,
-            version: self.version,
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 struct CachedAudioFile {
     path: PathBuf,
@@ -138,7 +42,6 @@ type InFlightDownloadRx = watch::Receiver<Option<Result<CachedAudioFile, String>
 
 #[derive(Debug, Clone)]
 pub struct MusicHub {
-    rooms: Arc<RwLock<HashMap<String, MusicRoomState>>>,
     in_flight_downloads: Arc<Mutex<HashMap<String, InFlightDownloadRx>>>,
     download_semaphore: Arc<Semaphore>,
 }
@@ -146,7 +49,6 @@ pub struct MusicHub {
 impl Default for MusicHub {
     fn default() -> Self {
         Self {
-            rooms: Arc::new(RwLock::new(HashMap::new())),
             in_flight_downloads: Arc::new(Mutex::new(HashMap::new())),
             download_semaphore: Arc::new(Semaphore::new(2)),
         }
@@ -167,43 +69,12 @@ pub struct SearchQuery {
 #[derive(Debug, Deserialize)]
 pub struct StreamQuery {
     pub start: Option<f64>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct EnqueueRequest {
-    pub video_id: String,
-    pub title: String,
-    pub author: String,
-    pub duration_sec: u64,
-    pub thumbnail_url: String,
-    pub url: String,
-    pub requested_by_name: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RemoveRequest {
-    pub track_uid: String,
+    pub token: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ErrorBody {
     error: String,
-}
-
-fn now_epoch_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
-}
-
-fn is_valid_room_id(room_id: &str) -> bool {
-    let t = room_id.trim();
-    !t.is_empty()
-        && t.len() <= 128
-        && t == room_id
-        && t.chars()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | ':'))
 }
 
 fn is_valid_video_id(video_id: &str) -> bool {
@@ -750,9 +621,46 @@ pub async fn prepare_music_handler(
 pub async fn stream_music_handler(
     headers: HeaderMap,
     Path(video_id): Path<String>,
-    Query(_query): Query<StreamQuery>,
+    Query(query): Query<StreamQuery>,
     State(state): State<AppState>,
 ) -> Response {
+    let header_token = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .and_then(|raw| {
+            raw.strip_prefix("Bearer ")
+                .or_else(|| raw.strip_prefix("bearer "))
+        })
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    let query_token = query
+        .token
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    let Some(token) = header_token.or(query_token) else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ErrorBody {
+                error: "Autenticação obrigatória para reproduzir áudio.".to_string(),
+            }),
+        )
+            .into_response();
+    };
+
+    if let Err(err) = state.auth.verify_bearer_token(token).await {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ErrorBody {
+                error: format!("Token inválido: {err}"),
+            }),
+        )
+            .into_response();
+    }
+
     if !is_valid_video_id(&video_id) {
         return (
             StatusCode::BAD_REQUEST,
@@ -828,7 +736,7 @@ pub async fn stream_music_handler(
                 format!("bytes {start}-{end}/{total_len}"),
             )
             .header(header::ACCEPT_RANGES, "bytes")
-            .header(header::CACHE_CONTROL, "public, max-age=900")
+            .header(header::CACHE_CONTROL, "private, max-age=900")
             .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
             .header(
                 header::ACCESS_CONTROL_EXPOSE_HEADERS,
@@ -844,7 +752,7 @@ pub async fn stream_music_handler(
         .header(header::CONTENT_TYPE, cached.content_type)
         .header(header::CONTENT_LENGTH, total_len.to_string())
         .header(header::ACCEPT_RANGES, "bytes")
-        .header(header::CACHE_CONTROL, "public, max-age=900")
+        .header(header::CACHE_CONTROL, "private, max-age=900")
         .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
         .header(
             header::ACCESS_CONTROL_EXPOSE_HEADERS,
@@ -852,225 +760,6 @@ pub async fn stream_music_handler(
         )
         .body(Body::from_stream(stream))
         .unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())
-}
-
-pub async fn get_room_music_handler(
-    headers: HeaderMap,
-    Path(room_id): Path<String>,
-    State(state): State<AppState>,
-) -> Result<Json<MusicRoomSnapshot>, (StatusCode, Json<ErrorBody>)> {
-    let _user_id = authenticate_request(&headers, &state).await?;
-    if !is_valid_room_id(&room_id) {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ErrorBody {
-                error: "room_id inválido.".to_string(),
-            }),
-        ));
-    }
-
-    let now = now_epoch_ms();
-    let mut rooms = state.music.rooms.write().await;
-    let room = rooms.entry(room_id.clone()).or_default();
-    room.advance_if_finished(now);
-    Ok(Json(room.to_snapshot(&room_id, now)))
-}
-
-pub async fn enqueue_music_handler(
-    headers: HeaderMap,
-    Path(room_id): Path<String>,
-    State(state): State<AppState>,
-    Json(body): Json<EnqueueRequest>,
-) -> Result<Json<MusicRoomSnapshot>, (StatusCode, Json<ErrorBody>)> {
-    let user_id = authenticate_request(&headers, &state).await?;
-    if !is_valid_room_id(&room_id) || !is_valid_video_id(&body.video_id) {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ErrorBody {
-                error: "Parâmetros inválidos para adicionar música.".to_string(),
-            }),
-        ));
-    }
-
-    let track = MusicTrack {
-        track_uid: Uuid::new_v4().to_string(),
-        video_id: body.video_id.clone(),
-        title: body.title.trim().chars().take(160).collect(),
-        author: body.author.trim().chars().take(80).collect(),
-        duration_sec: body.duration_sec,
-        thumbnail_url: body.thumbnail_url.trim().to_string(),
-        url: body.url.trim().to_string(),
-        requested_by_id: user_id,
-        requested_by_name: body
-            .requested_by_name
-            .unwrap_or_else(|| "Membro".to_string())
-            .trim()
-            .chars()
-            .take(48)
-            .collect(),
-    };
-
-    let now = now_epoch_ms();
-    let mut rooms = state.music.rooms.write().await;
-    let room = rooms.entry(room_id.clone()).or_default();
-    room.advance_if_finished(now);
-
-    if room.current.is_none() {
-        room.current = Some(track);
-        room.is_playing = true;
-        room.started_at_ms = now;
-        room.paused_offset_sec = 0.0;
-    } else {
-        if room.queue.len() >= MAX_QUEUE_LEN {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(ErrorBody {
-                    error: format!("Fila cheia (máximo de {MAX_QUEUE_LEN} músicas)."),
-                }),
-            ));
-        }
-        room.queue.push(track);
-    }
-    room.version += 1;
-
-    // Pre-warm audio cache in background so playback starts instantaneously
-    let hub_clone = state.music.clone();
-    let vid_clone = body.video_id;
-    tokio::spawn(async move {
-        let _ = ensure_cached_audio_file(&hub_clone, &vid_clone).await;
-    });
-
-    Ok(Json(room.to_snapshot(&room_id, now)))
-}
-
-pub async fn toggle_music_handler(
-    headers: HeaderMap,
-    Path(room_id): Path<String>,
-    State(state): State<AppState>,
-) -> Result<Json<MusicRoomSnapshot>, (StatusCode, Json<ErrorBody>)> {
-    let _user_id = authenticate_request(&headers, &state).await?;
-    if !is_valid_room_id(&room_id) {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ErrorBody {
-                error: "room_id inválido.".to_string(),
-            }),
-        ));
-    }
-
-    let now = now_epoch_ms();
-    let mut rooms = state.music.rooms.write().await;
-    let room = rooms.entry(room_id.clone()).or_default();
-    room.advance_if_finished(now);
-
-    if room.current.is_some() {
-        if room.is_playing {
-            let elapsed = now.saturating_sub(room.started_at_ms) as f64 / 1000.0;
-            room.paused_offset_sec = elapsed.max(0.0);
-            room.is_playing = false;
-        } else {
-            let offset_ms = (room.paused_offset_sec.max(0.0) * 1000.0) as u64;
-            room.started_at_ms = now.saturating_sub(offset_ms);
-            room.is_playing = true;
-        }
-        room.version += 1;
-    }
-
-    Ok(Json(room.to_snapshot(&room_id, now)))
-}
-
-pub async fn skip_music_handler(
-    headers: HeaderMap,
-    Path(room_id): Path<String>,
-    State(state): State<AppState>,
-) -> Result<Json<MusicRoomSnapshot>, (StatusCode, Json<ErrorBody>)> {
-    let _user_id = authenticate_request(&headers, &state).await?;
-    if !is_valid_room_id(&room_id) {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ErrorBody {
-                error: "room_id inválido.".to_string(),
-            }),
-        ));
-    }
-
-    let now = now_epoch_ms();
-    let mut rooms = state.music.rooms.write().await;
-    let room = rooms.entry(room_id.clone()).or_default();
-
-    if let Some(next) = room.queue.first().cloned() {
-        room.queue.remove(0);
-        room.current = Some(next);
-        room.is_playing = true;
-        room.started_at_ms = now;
-        room.paused_offset_sec = 0.0;
-    } else {
-        room.current = None;
-        room.is_playing = false;
-        room.started_at_ms = 0;
-        room.paused_offset_sec = 0.0;
-    }
-    room.version += 1;
-
-    Ok(Json(room.to_snapshot(&room_id, now)))
-}
-
-pub async fn remove_music_handler(
-    headers: HeaderMap,
-    Path(room_id): Path<String>,
-    State(state): State<AppState>,
-    Json(body): Json<RemoveRequest>,
-) -> Result<Json<MusicRoomSnapshot>, (StatusCode, Json<ErrorBody>)> {
-    let _user_id = authenticate_request(&headers, &state).await?;
-    if !is_valid_room_id(&room_id) {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ErrorBody {
-                error: "room_id inválido.".to_string(),
-            }),
-        ));
-    }
-
-    let now = now_epoch_ms();
-    let mut rooms = state.music.rooms.write().await;
-    let room = rooms.entry(room_id.clone()).or_default();
-    room.advance_if_finished(now);
-
-    let before = room.queue.len();
-    room.queue.retain(|t| t.track_uid != body.track_uid);
-    if room.queue.len() != before {
-        room.version += 1;
-    }
-
-    Ok(Json(room.to_snapshot(&room_id, now)))
-}
-
-pub async fn clear_music_handler(
-    headers: HeaderMap,
-    Path(room_id): Path<String>,
-    State(state): State<AppState>,
-) -> Result<Json<MusicRoomSnapshot>, (StatusCode, Json<ErrorBody>)> {
-    let _user_id = authenticate_request(&headers, &state).await?;
-    if !is_valid_room_id(&room_id) {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ErrorBody {
-                error: "room_id inválido.".to_string(),
-            }),
-        ));
-    }
-
-    let now = now_epoch_ms();
-    let mut rooms = state.music.rooms.write().await;
-    let room = rooms.entry(room_id.clone()).or_default();
-    room.current = None;
-    room.queue.clear();
-    room.is_playing = false;
-    room.started_at_ms = 0;
-    room.paused_offset_sec = 0.0;
-    room.version += 1;
-
-    Ok(Json(room.to_snapshot(&room_id, now)))
 }
 
 #[cfg(test)]
