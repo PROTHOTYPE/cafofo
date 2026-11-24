@@ -3,8 +3,7 @@ import { useEffect, useState } from "react";
 const SCRAMBLE_GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/#*+-=";
 
 /**
- * Micro-animação de decodificação de texto (06-animacao-status-pioneer.mp4)
- * Usada quando uma transmissão ao vivo inicia ou muda de status.
+ * Efeito curto de decodificação de texto quando uma transmissão inicia ou muda de status.
  */
 export function useTextScramble(targetText: string, active = true, durationMs = 520): string {
   const [display, setDisplay] = useState(targetText);

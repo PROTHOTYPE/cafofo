@@ -298,7 +298,7 @@ export function ProfileCardPreview({
             sizePx={68}
           />
 
-          {/* Badges Estilo Adesivo Recortado / Die-Cut Stickers (04-badges-stickers.mp4) */}
+          {/* Stickers do perfil */}
           <div className="flex flex-wrap gap-1.5 justify-end pt-2">
             <span
               className="die-cut-sticker"

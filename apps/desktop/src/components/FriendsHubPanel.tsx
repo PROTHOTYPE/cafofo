@@ -352,7 +352,7 @@ export function FriendsHubPanel({
 
   return (
     <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-[#16161C]">
-      {/* Header Obsidiana & Carmesim com Abas */}
+      {/* Header com abas */}
       <header className="min-h-[56px] px-3 sm:px-5 py-2 crimson-header-glow crimson-header-animated-border hairline-b flex flex-wrap items-center justify-between gap-2 shrink-0 select-none">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {onOpenLeftDrawer && (

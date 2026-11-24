@@ -998,7 +998,7 @@ export function ChatPanel({
         })}
       </div>
 
-      {/* Área Flutuante Inferior com Input em Pílula (05-chat-input-glow-handshake.png) */}
+      {/* Input de mensagem */}
       <form onSubmit={handleSend} className="relative px-3 sm:px-5 pb-3 pt-2 space-y-2">
         {!isAtBottom && unreadState && unreadState.count > 0 && (
           <div className="absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+8px)] z-30 pointer-events-auto">

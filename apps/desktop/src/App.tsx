@@ -1031,7 +1031,7 @@ export function App() {
     <Tooltip.Provider delayDuration={150}>
       <div className="h-[100dvh] w-full max-w-full overflow-x-hidden overflow-y-hidden flex flex-col bg-[#09090B] text-[#FAFAFA] pt-[env(safe-area-inset-top)] animate-cafofo-boot">
         <WindowTitlebar inVoiceCall={Boolean(activeVoiceChannelId)} />
-        {/* Grid Arquitetural Principal com Bordas Hairline (02-grid-equalizador-primora.mp4) */}
+        {/* Layout principal */}
         <div className="flex-1 flex min-h-0 relative">
           {/* Backdrop Mobile para Gavetas Deslizantes */}
           {(leftDrawerOpen || rightDrawerOpen) && (
@@ -1111,7 +1111,7 @@ export function App() {
 
                 <div className="w-7 h-[1px] bg-white/[0.07]" />
 
-                {/* Lista de Servidores com Pílula Lateral Carmesim (01-layout-paleta-superlist.png) */}
+                {/* Lista de servidores */}
                 {servers.map((srv) => {
                   const isActive =
                     viewMode === "server" && srv.id === activeServerId;
@@ -1581,7 +1581,7 @@ export function App() {
                     </div>
                   </div>
 
-                  {/* Lista de Canais de Texto e Voz (01-layout-paleta-superlist.png) */}
+                  {/* Canais de texto e voz */}
                   <div className="flex-1 overflow-y-auto p-3 space-y-5">
                     {/* Seção Texto */}
                     <div className="space-y-1">

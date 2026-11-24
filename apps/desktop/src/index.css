@@ -3,20 +3,20 @@
 @tailwind utilities;
 
 :root {
-  /* Regra 90/8/2 — Obsidiana Arquitetural (90%) */
+  /* Paleta base */
   --bg-obsidian-base: #09090B;
   --bg-obsidian-sidebar: #101014;
   --bg-obsidian-stage: #16161C;
   --bg-obsidian-elevated: #1E1E26;
 
-  /* Bordas Hairline & Tipografia Neutra (8%) */
+  /* Bordas e texto */
   --border-hairline: rgba(255, 255, 255, 0.07);
   --border-hairline-strong: rgba(255, 255, 255, 0.13);
   --text-primary: #FAFAFA;
   --text-secondary: #A1A1AA;
   --text-muted: #71717A;
 
-  /* Vermelho Profundo / Rubi (2%) */
+  /* Destaque carmesim */
   --accent-crimson: #B91C1C;
   --accent-crimson-hover: #991B1B;
   --badge-live-bg: #7F1D1D;
@@ -86,7 +86,7 @@
 }
 
 @layer utilities {
-  /* Bordas Hairline (02-grid-equalizador-primora.mp4) */
+  /* Bordas finas (hairline) */
   .hairline-b {
     border-bottom: 1px solid var(--border-hairline);
   }
@@ -103,7 +103,7 @@
     border: 1px solid var(--border-hairline);
   }
 
-  /* Brilho Radial Difuso em Cabeçalhos (05-chat-input-glow-handshake.png) */
+  /* Glow sutil nos cabeçalhos */
   .crimson-header-glow {
     background-image: radial-gradient(
       ellipse 70% 120% at 18% 0%,
@@ -112,7 +112,7 @@
     );
   }
 
-  /* Arte Luminosa Rubi Profundo 50/50 (03-card-perfil-login-soundcore.mp4) */
+  /* Fundo da coluna de destaque na tela de login */
   .ruby-refraction-canvas {
     background-color: #09090B;
     background-image:
@@ -128,7 +128,7 @@
       linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
   }
 
-  /* Scoped Glass Aprimorado (Obsidiana & Carmesim) */
+  /* Efeito vidro fosco para modais e banners flutuantes */
   .scoped-glass {
     background-color: rgba(16, 16, 20, 0.8);
     backdrop-filter: blur(12px) saturate(140%);
@@ -137,7 +137,7 @@
     box-shadow: 0 0 30px rgba(185, 28, 28, 0.15);
   }
 
-  /* Botão Principal / Pílula com Gradiente Carmesim Deslizante e Feedback Tátil */
+  /* Botão principal carmesim */
   .btn-crimson-vivid {
     background-image: linear-gradient(
       135deg,
@@ -160,7 +160,7 @@
     transform: scale(0.985);
   }
 
-  /* Badges Adesivo Recortado / Die-Cut Sticker (04-badges-stickers.mp4) */
+  /* Stickers do perfil */
   .die-cut-sticker {
     display: inline-flex;
     align-items: center;

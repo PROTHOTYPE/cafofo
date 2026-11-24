@@ -15,7 +15,6 @@ exclude = [
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-authors = ["Cafofo Contributors"]
 
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }

@@ -46,7 +46,7 @@ export function AuthScreen() {
 
   return (
     <div className="min-h-[100dvh] w-full max-w-full grid grid-cols-1 lg:grid-cols-2 bg-[#09090B] text-[#FAFAFA] overflow-x-hidden overflow-y-auto pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] select-none animate-cafofo-boot">
-      {/* Metade Esquerda (50%): Arte & Refração Luminosa Rubi Profundo + Gradiente Radial Pulsante + Telemetria SVG */}
+      {/* Painel esquerdo com preview e destaque visual */}
       <div className="hidden lg:flex relative flex-col justify-between p-10 ruby-refraction-canvas hairline-r overflow-hidden">
         {/* Gradiente Radial Pulsante (@keyframes cyber-pulse) */}
         <div
@@ -130,7 +130,7 @@ export function AuthScreen() {
           </span>
         </div>
 
-        {/* Vitrine Central: Cartão Arquitetural com Scoped Glass Aprimorado + Equalizador Vertical */}
+        {/* Card de preview da sala */}
         <div className="relative z-10 my-auto max-w-md mx-auto w-full space-y-6">
           <div className="rounded-2xl backdrop-blur-md bg-[#101014]/80 border border-white/[0.08] shadow-[0_0_30px_rgba(185,28,28,0.15)] p-6 space-y-5">
             <div className="flex items-start justify-between gap-4">
@@ -216,7 +216,7 @@ export function AuthScreen() {
           </div>
         </div>
 
-        {/* Rodapé Arquitetural */}
+        {/* Rodapé */}
         <div className="relative z-10 flex items-center justify-between text-xs text-[#A1A1AA] font-mono">
           <span>OBSIDIAN MATTE #09090B</span>
           <span>DEEP CRIMSON #B91C1C</span>
